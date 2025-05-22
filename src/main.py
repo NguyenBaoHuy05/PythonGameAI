@@ -130,11 +130,15 @@ def main():
 
     # Gọi reset_game() lần đầu sau khi tạo màn hình
     map_data, pacman, ghosts, score, won = reset_game()
-
+    last_time = pygame.time.get_ticks()
+    chase_time = 10000
+    scatter_time = 5000
+    chase_mode = False
     clock = pygame.time.Clock()
     running = True
 
     while running:
+        now = pygame.time.get_ticks()
         dt = clock.tick(FPS)
         screen.fill((0, 0, 0))
 
@@ -151,8 +155,6 @@ def main():
                     pacman.set_direction(0, -1)
                 elif event.key == pygame.K_DOWN:
                     pacman.set_direction(0, 1)
-
-        # Cập nhật game chỉ khi còn mạng
         if pacman.lives > 0:
 
             if pacman.alive:
@@ -169,9 +171,17 @@ def main():
                         ghost.set_frightened()
 
             for ghost in ghosts:
-                ghost.update(map_data, pacman)
+                ghost.update(map_data, pacman, chase_mode)
+                if chase_mode:
+                    if now - last_time > chase_time:
+                        chase_mode = False
+                        last_time = now
+                else:
+                    if now - last_time > scatter_time:
+                        chase_mode = True
+                        last_time = now
+            pacman.update(map_data)
 
-            pacman.update(map_data, ghosts)
             draw_map(screen, map_data)
             pacman.draw(screen)
             for ghost in ghosts:

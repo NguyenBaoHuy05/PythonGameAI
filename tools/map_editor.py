@@ -9,7 +9,7 @@ WINDOW_WIDTH = TILE_SIZE * MAP_WIDTH
 WINDOW_HEIGHT = TILE_SIZE * MAP_HEIGHT
 MAP_FILE = "../assets/maps/level1.txt"
 
-# ========== Màu sắc ==========
+# Màu sắc
 BLACK = (0, 0, 0)
 GRAY = (100, 100, 100)
 BLUE = (50, 50, 255)
@@ -19,7 +19,7 @@ GREEN = (0, 255, 0)
 RED = (255, 0, 0)
 WHITE = (255, 255, 255)
 
-# ========== Ký hiệu và màu tương ứng ==========
+# Ký hiệu và màu tương ứng
 tile_types = {
     "#": BLUE,  # tường
     ".": YELLOW,  # chấm ăn nhỏ
@@ -28,7 +28,7 @@ tile_types = {
     "G": RED,  # ghost
 }
 
-# ========== Khởi tạo ==========
+# Khởi tạo
 pygame.init()
 screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 pygame.display.set_caption("Pac-Man Map Editor")

@@ -43,23 +43,23 @@ class Pacman:
         self.set_direction(0, 0)
         self.fade_alpha = 255
         self.alive = True
-        self.invincible = False
+
         self.death_time = None
         self.respawn_time = None
 
     def set_direction(self, dx, dy):
         self.desired_direction = pygame.Vector2(dx, dy)
 
-    def update(self, map_data, ghosts):
+    def update(self, map_data):
         now = pygame.time.get_ticks()
-
-        # Nếu đang chết thì xử lý hiệu ứng mờ dần trong 2s
         if not self.alive:
             elapsed = now - self.death_time
-            if elapsed < 2000:
+            if now - self.death_time < 2000:
                 self.fade_alpha = max(255 - int((elapsed / 2000) * 255), 0)
+                print(elapsed)
             else:
                 # Sau 2s hiệu ứng mờ dần thì giảm mạng, reset vị trí và kích hoạt bất tử
+                print("Pacman died")
                 self.lives -= 1
                 self.reset_position()
                 self.invincible = True
@@ -93,8 +93,6 @@ class Pacman:
                 int(self.pixel_pos.y / TILE_SIZE + 0.5),
             )
 
-        # Kiểm tra va chạm với ghost nếu không bất tử
-
     def can_move(self, direction, map_data):
         if direction.length_squared() == 0:
             return False
@@ -123,15 +121,11 @@ class Pacman:
                 return False
         return True
 
-    def set_dead(self, now):
+    def set_dead(self):
         self.alive = False
+        now = pygame.time.get_ticks()
         self.death_time = now
         self.fade_alpha = 255
-
-    def is_colliding_with(self, ghost):
-        return int(self.grid_pos.x) == int(ghost.grid_pos.x) and int(
-            self.grid_pos.y
-        ) == int(ghost.grid_pos.y)
 
     def draw(self, screen):
         frame = self.frames[self.current_frame]
@@ -139,7 +133,6 @@ class Pacman:
         rotated = pygame.transform.rotate(frame, angle)
 
         if not self.alive:
-            # Hiệu ứng mờ dần khi chết (giảm alpha từ 255 -> 0 trong 2 giây)
             faded = rotated.copy()
             faded.set_alpha(self.fade_alpha)
             screen.blit(faded, (int(self.pixel_pos.x), int(self.pixel_pos.y)))
