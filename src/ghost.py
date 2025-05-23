@@ -160,14 +160,17 @@ class Ghost:
                 )
             )
             self.change_direction(map_data, near_direction)
-            self.pixel_pos += self.direction * self.speed
-            self.grid_pos = pygame.Vector2(
-                int(self.pixel_pos.x // TILE_SIZE),
-                int(self.pixel_pos.y // TILE_SIZE),
-            )
+            if self.can_move(self.direction, map_data):
+                self.pixel_pos += self.direction * self.speed
+                self.grid_pos = pygame.Vector2(
+                    int(self.pixel_pos.x // TILE_SIZE),
+                    int(self.pixel_pos.y // TILE_SIZE),
+                )
+            else:
+                self.change_direction(map_data, self.direction)
             return
 
-        if chase_mode and random.random() > 0.2:
+        if chase_mode and random.random() > 0.3:
             move = alg.bfs_direction(
                 map_data,
                 (int(self.grid_pos.x), int(self.grid_pos.y)),
@@ -179,9 +182,10 @@ class Ghost:
                 if self.can_move(self.chase_path, map_data)
                 else self.direction
             )
-            if self.can_move(move_direction, map_data, (self.speed + 0.5)):
+            self.change_direction(map_data, move_direction)
+            if self.can_move(move_direction, map_data, (self.speed + 1.5)):
                 self.direction = move_direction
-                self.pixel_pos += self.direction * (self.speed + 0.5)
+                self.pixel_pos += self.direction * (self.speed + 1.5)
                 self.grid_pos = pygame.Vector2(
                     int(self.pixel_pos.x // TILE_SIZE),
                     int(self.pixel_pos.y // TILE_SIZE),
@@ -210,7 +214,7 @@ class Ghost:
             self.grid_pos.y
         ) == int(pacman.grid_pos.y)
 
-    def can_move(self, direction, map_data, speed=1):
+    def can_move(self, direction, map_data, speed=2):
         if direction.length_squared() == 0:
             return False
         next_pos = self.pixel_pos + direction * speed

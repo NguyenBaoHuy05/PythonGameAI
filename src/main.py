@@ -6,7 +6,6 @@ from map_loader import (
     load_map,
     find_pacman_start,
     find_ghost_start,
-    find_home_start,
 )
 
 # ==== CẤU HÌNH ====
@@ -88,7 +87,6 @@ def main():
     pygame.init()
     font = pygame.font.SysFont("arial", 24)
 
-    # Tải map để lấy kích thước màn hình
     map_data = load_map(MAP_FILE)
     MAP_WIDTH = len(map_data[0])
     MAP_HEIGHT = len(map_data)
@@ -194,6 +192,10 @@ def main():
                     center=(screen.get_width() // 2, screen.get_height() // 2)
                 )
                 screen.blit(win_text, rect)
+                pygame.display.flip()
+                pygame.time.delay(2000)
+                pygame.quit()
+                sys.exit()
 
         else:
             # Hết mạng
