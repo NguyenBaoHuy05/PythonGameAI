@@ -245,6 +245,7 @@ class Pacman:
         self.set_direction(0, 0)
         self.fade_alpha = 255
         self.alive = True
+
         self.death_time = None
         self.respawn_time = None
         if self.ai:
