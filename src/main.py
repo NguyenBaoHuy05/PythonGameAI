@@ -41,11 +41,16 @@ def draw_ui(screen, font, score, lives):
 def check_win(map_data):
     return not any("." in row or "o" in row for row in map_data)
 
+def check_collision(pacman, ghost):
+    pacman_pos = (int(pacman.grid_pos.x), int(pacman.grid_pos.y))
+    ghost_pos = (int(ghost.grid_pos.x), int(ghost.grid_pos.y))
+    return pacman_pos == ghost_pos
+
 def game_over_menu(screen, font):
     screen.fill((0, 0, 0))
     game_over_text = font.render("Game Over!", True, (255, 0, 0))
     retry_text = font.render(
-        "Chose R to play again or Q to quit", True, (255, 255, 255)
+        "Press R to play again or Q to quit", True, (255, 255, 255)
     )
     screen.blit(
         game_over_text,
@@ -78,7 +83,18 @@ def game_over_menu(screen, font):
 def main():
     pygame.init()
     font = pygame.font.SysFont("arial", 24)
-    map_data = load_map(MAP_FILE)
+    try:
+        map_data = load_map(MAP_FILE)
+    except Exception as e:
+        print(f"Error loading map: {e}")
+        pygame.quit()
+        sys.exit()
+    
+    if not map_data or not map_data[0]:
+        print("Error: Empty or invalid map_data")
+        pygame.quit()
+        sys.exit()
+
     MAP_WIDTH = len(map_data[0])
     MAP_HEIGHT = len(map_data)
     screen = pygame.display.set_mode(
@@ -94,7 +110,13 @@ def main():
 
     def reset_game():
         new_map_data = load_map(MAP_FILE)
-        pacman = Pacman(*find_pacman_start(new_map_data))
+        if not new_map_data or not new_map_data[0]:
+            print("Error: Empty or invalid map_data in reset_game")
+            pygame.quit()
+            sys.exit()
+        
+        pacman_start = find_pacman_start(new_map_data)
+        pacman = Pacman(*pacman_start)
         ghosts = [
             Ghost(
                 *find_ghost_start(new_map_data, "B"),
@@ -118,7 +140,8 @@ def main():
             ),
         ]
         game = Game(new_map_data, pacman, ghosts)
-        pacman.set_ai(game)  # Khởi tạo AI cho Pacman
+        print(f"Game initialized: map_data={len(new_map_data)}x{len(new_map_data[0])}, ghosts={len(ghosts)}")
+        pacman.set_ai(game)
         score = 0
         won = False
         return game, score, won
@@ -128,7 +151,7 @@ def main():
     chase_time = 10000
     scatter_time = 5000
     chase_mode = False
-    clock = pygame.time.Clock()
+    clock = pygame.time.Clock()  # Sửa typo từ pygame.clock
     running = True
 
     while running:
@@ -149,36 +172,52 @@ def main():
                 elif event.key == pygame.K_DOWN:
                     game.pacman.set_direction(0, 1)
                 elif event.key == pygame.K_a:
-                    game.pacman.ai.mode = 'A*'  # Kích hoạt A*
+                    if game.pacman.ai:
+                        game.pacman.ai.mode = 'A*'
+                        print("A* mode activated")
                 elif event.key == pygame.K_b:
-                    game.pacman.ai.mode = 'BFS'  # Kích hoạt BFS
+                    if game.pacman.ai:
+                        game.pacman.ai.mode = 'BFS'
+                        print("BFS mode activated")
                 elif event.key == pygame.K_ESCAPE:
-                    game.pacman.ai.mode = None  # Tắt AI
+                    if game.pacman.ai:
+                        game.pacman.ai.mode = None
+                        print("AI mode disabled")
 
         if game.pacman.lives > 0:
             if game.pacman.alive:
                 x, y = int(game.pacman.grid_pos.x), int(game.pacman.grid_pos.y)
-                if game.map_data[y][x] in ['.', 'o']:
-                    if game.map_data[y][x] == '.':
-                        score += 10
-                    else:  # 'o'
-                        score += 50
-                        for ghost in game.ghosts:
-                            ghost.set_frightened()
-                    game.map_data[y][x] = ' '  # Xóa điểm đã ăn
-                    if check_win(game.map_data):
-                        won = True
+                if 0 <= y < len(game.map_data) and 0 <= x < len(game.map_data[0]):
+                    if game.map_data[y][x] in ['.', 'o']:
+                        if game.map_data[y][x] == '.':
+                            score += 10
+                        else:
+                            score += 50
+                            for ghost in game.ghosts:
+                                ghost.set_frightened()
+                        game.map_data[y][x] = ' '
+                        if check_win(game.map_data):
+                            won = True
 
             for ghost in game.ghosts:
                 ghost.update(game.map_data, game.pacman, chase_mode)
-                if chase_mode:
-                    if now - last_time > chase_time:
-                        chase_mode = False
-                        last_time = now
-                else:
-                    if now - last_time > scatter_time:
-                        chase_mode = True
-                        last_time = now
+                # Chỉ xử lý va chạm ở đây, không để ghost.py xử lý
+                if check_collision(game.pacman, ghost):
+                    if ghost.frightened_timer > 0:
+                        score += 200
+                        ghost.set_eaten()
+                    elif not game.pacman.invincible and game.pacman.alive:
+                        game.pacman.set_dead()
+
+            if chase_mode:
+                if now - last_time > chase_time:
+                    chase_mode = False
+                    last_time = now
+            else:
+                if now - last_time > scatter_time:
+                    chase_mode = True
+                    last_time = now
+
             game.pacman.update(game.map_data)
 
             draw_map(screen, game.map_data)
