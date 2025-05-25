@@ -206,7 +206,7 @@ class Ghost:
         if self.is_colliding_with(pacman):
             if self.frightened_timer > 0:
                 self.set_alive(map_data, self.grid_pos, self.home_pos)
-            elif self.alive and pacman.alive and not pacman.invincible:
+            elif self.alive and pacman.alive:
                 pacman.set_dead()
 
     def is_colliding_with(self, pacman):
@@ -251,14 +251,10 @@ class Ghost:
         ]
         do_directions = other_direction if other_direction else self.direction
         random.shuffle(directions)
-        i = 0
         for d in directions:
             if d != -do_directions and self.can_move(d, map_data):
                 self.direction = d
-                i += 1
                 break
-        if i == 0:
-            self.direction = -do_directions
 
     def draw(self, screen):
         if self.frightened_timer > 0:

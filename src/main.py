@@ -12,7 +12,7 @@ from menu import (
     pause_menu,
     game_over_menu,
     victory_menu,
-    show_controls,
+    show_controls
 )
 
 # ==== CẤU HÌNH ====
@@ -23,7 +23,6 @@ WHITE = (255, 255, 255)
 BLUE = (0, 0, 255)
 YELLOW = (255, 255, 0)
 ORANGE = (255, 150, 0)
-
 
 # ==== HÀM TIỆN ÍCH ====
 def draw_map(screen, map_data):
@@ -39,13 +38,11 @@ def draw_map(screen, map_data):
             elif tile == "o":
                 pygame.draw.circle(screen, ORANGE, rect.center, 6)
 
-
 def draw_ui(screen, font, score, lives):
     score_text = font.render(f"Score: {score}", True, WHITE)
     lives_text = font.render(f"Lives: {lives}", True, WHITE)
     screen.blit(score_text, (10, 10))
     screen.blit(lives_text, (10, 40))
-
 
 def check_win(map_data):
     return not any("." in row or "o" in row for row in map_data)
@@ -140,7 +137,7 @@ def main():
         won = False
         return new_map_data, pacman, ghosts, score, won
 
-
+# ==== MAIN GAME ====
 def main():
     pygame.init()
     font = pygame.font.SysFont("arial", 24)
@@ -214,7 +211,7 @@ def main():
                         pacman.set_direction(0, -1)
                     elif event.key == pygame.K_DOWN:
                         pacman.set_direction(0, 1)
-
+                
         if paused:
             pygame.display.flip()
             continue
@@ -273,7 +270,6 @@ def main():
 
     pygame.quit()
     sys.exit()
-
 
 if __name__ == "__main__":
     main()
