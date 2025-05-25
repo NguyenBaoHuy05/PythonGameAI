@@ -7,199 +7,6 @@ import random
 
 TILE_SIZE = 20
 
-class PacmanAI:
-    def __init__(self, pacman, game):
-        self.pacman = pacman
-        self.game = game
-        self.mode = None
-        self.visited_targets = set()
-        self.current_path = []
-        self.current_target = None
-        self.last_target_update = 0
-        self.last_direction = pygame.Vector2(0, 0)
-        # Kiểm tra map_data trước khi gọi get_targets
-        if not hasattr(game, 'map_data') or not game.map_data or not game.map_data[0]:
-            print("Warning: Invalid map_data in PacmanAI")
-            self.targets = []
-        else:
-            self.targets = self.get_targets()
-
-    def manhattan_distance(self, pos1: Tuple[int, int], pos2: Tuple[int, int]) -> int:
-        return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
-
-    def get_neighbors(self, pos: Tuple[int, int]) -> List[Tuple[int, int]]:
-        x, y = pos
-        neighbors = [(x+1, y), (x-1, y), (x, y+1), (x, y-1)]
-        return [(nx, ny) for nx, ny in neighbors if self.can_move_to(nx, ny)]
-
-    def can_move_to(self, x: int, y: int) -> bool:
-        if (x < 0 or x >= len(self.game.map_data[0]) or
-            y < 0 or y >= len(self.game.map_data) or
-            self.game.map_data[y][x] == "#"):
-            return False
-        return True
-
-    def is_safe(self, pos: Tuple[int, int]) -> bool:
-        ghost_positions = [(int(ghost.grid_pos.x), int(ghost.grid_pos.y)) for ghost in self.game.ghosts]
-        for ghost_pos in ghost_positions:
-            if self.manhattan_distance(pos, ghost_pos) <= 2:
-                return False
-        return True
-
-    def get_targets(self) -> List[Tuple[int, int]]:
-        current_pos = (int(self.pacman.grid_pos.x), int(self.pacman.grid_pos.y))
-        radius = 6  # Giảm bán kính để tăng tốc
-        targets = []
-        for y in range(max(0, current_pos[1] - radius), min(len(self.game.map_data), current_pos[1] + radius + 1)):
-            for x in range(max(0, current_pos[0] - radius), min(len(self.game.map_data[0]), current_pos[0] + radius + 1)):
-                if self.game.map_data[y][x] in ['.', 'o'] and (x, y) not in self.visited_targets:
-                    targets.append((x, y))
-        
-        targets = sorted(targets, key=lambda t: self.manhattan_distance(current_pos, t))
-        if not targets:
-            self.visited_targets.clear()
-            return self.get_targets()
-        
-        print(f"Targets found: {len(targets)} targets")
-        return targets
-
-    def update_targets(self):
-        if self.current_target:
-            self.visited_targets.add(self.current_target)
-            if self.current_target in self.targets:
-                self.targets.remove(self.current_target)
-        self.current_path = []
-        self.current_target = None
-        self.last_target_update = pygame.time.get_ticks()
-        print(f"Targets remaining: {len(self.targets)}, Visited: {len(self.visited_targets)}")
-
-    def a_star(self, start: Tuple[int, int]) -> List[Tuple[int, int]]:
-        if not self.targets:
-            return self.get_safe_fallback_path(start)
-
-        target = min(self.targets, key=lambda t: self.manhattan_distance(start, t))  # Chỉ lấy mục tiêu gần nhất
-        open_set = [(0, start, [start])]
-        came_from = {}
-        g_score = {start: 0}
-        f_score = {start: self.manhattan_distance(start, target)}
-        visited = set()
-
-        while open_set:
-            current_f, current, path = heapq.heappop(open_set)
-            if current == target:
-                self.current_target = target
-                return path
-            if current in visited:
-                continue
-            visited.add(current)
-
-            for neighbor in self.get_neighbors(current):
-                if not self.is_safe(neighbor):
-                    continue
-                tentative_g_score = g_score[current] + 1
-                if neighbor not in g_score or tentative_g_score < g_score[neighbor]:
-                    came_from[neighbor] = current
-                    g_score[neighbor] = tentative_g_score
-                    f_score[neighbor] = tentative_g_score + self.manhattan_distance(neighbor, target)
-                    heapq.heappush(open_set, (f_score[neighbor], neighbor, path + [neighbor]))
-
-        return self.get_safe_fallback_path(start)
-
-    def bfs(self, start: Tuple[int, int]) -> List[Tuple[int, int]]:
-        if not self.targets:
-            return self.get_safe_fallback_path(start)
-
-        target = min(self.targets, key=lambda t: self.manhattan_distance(start, t))
-        queue = deque([(start, [start])])
-        visited = {start}
-
-        while queue:
-            current, path = queue.popleft()
-            if current == target:
-                self.current_target = target
-                return path
-
-            for neighbor in self.get_neighbors(current):
-                if neighbor not in visited and self.is_safe(neighbor):
-                    visited.add(neighbor)
-                    queue.append((neighbor, path + [neighbor]))
-
-        return self.get_safe_fallback_path(start)
-
-    def get_safe_fallback_path(self, start: Tuple[int, int]) -> List[Tuple[int, int]]:
-        neighbors = self.get_neighbors(start)
-        safe_neighbors = [n for n in neighbors if self.is_safe(n)]
-
-        if self.last_direction != pygame.Vector2(0, 0):
-            dx, dy = int(self.last_direction.x), int(self.last_direction.y)
-            next_pos = (start[0] + dx, start[1] + dy)
-            direction = pygame.Vector2(dx, dy)
-            if next_pos in safe_neighbors and self.pacman.can_move(direction, self.game.map_data):
-                return [start, next_pos]
-
-        unvisited_neighbors = [n for n in safe_neighbors if n not in self.visited_targets]
-        if unvisited_neighbors:
-            nearest = min(unvisited_neighbors, key=lambda n: self.manhattan_distance(start, n))
-            return [start, nearest]
-
-        if safe_neighbors:
-            nearest = random.choice(safe_neighbors)
-            return [start, nearest]
-
-        if neighbors:
-            nearest = random.choice(neighbors)
-            return [start, nearest]
-
-        return [start]
-
-    def get_next_move(self) -> pygame.Vector2:
-        if not self.mode:
-            self.current_path = []
-            self.last_direction = pygame.Vector2(0, 0)
-            return pygame.Vector2(0, 0)
-
-        current_pos = (int(self.pacman.grid_pos.x), int(self.pacman.grid_pos.y))
-
-        if self.current_path and len(self.current_path) > 1:
-            next_pos = self.current_path[1]
-            dx = next_pos[0] - current_pos[0]
-            dy = next_pos[1] - current_pos[1]
-            direction = pygame.Vector2(dx, dy)
-            if not self.pacman.can_move(direction, self.game.map_data) or not self.is_safe(next_pos):
-                self.current_path = []
-
-        if (self.game.map_data[current_pos[1]][current_pos[0]] in ['.', 'o'] or
-            not self.current_path or
-            pygame.time.get_ticks() - self.last_target_update > 1000):
-            self.update_targets()
-            self.targets = self.get_targets()
-            if self.mode == 'A*':
-                self.current_path = self.a_star(current_pos)
-            elif self.mode == 'BFS':
-                self.current_path = self.bfs(current_pos)
-
-        if self.current_path and len(self.current_path) > 1:
-            next_pos = self.current_path[1]
-            dx = next_pos[0] - current_pos[0]
-            dy = next_pos[1] - current_pos[1]
-            direction = pygame.Vector2(dx, dy)
-            if self.pacman.can_move(direction, self.game.map_data) and self.is_safe(next_pos):
-                self.current_path.pop(0)
-                self.last_direction = direction
-                return direction
-
-        self.current_path = self.get_safe_fallback_path(current_pos)
-        if self.current_path and len(self.current_path) > 1:
-            next_pos = self.current_path[1]
-            dx = next_pos[0] - current_pos[0]
-            dy = next_pos[1] - current_pos[1]
-            direction = pygame.Vector2(dx, dy)
-            if self.pacman.can_move(direction, self.game.map_data) and self.is_safe(next_pos):
-                self.current_path.pop(0)
-                self.last_direction = direction
-                return direction
-
-        return pygame.Vector2(0, 0)
 
 class Pacman:
     def __init__(self, x, y, sprite_folder="../assets/sprites/pacman"):
@@ -234,7 +41,9 @@ class Pacman:
     def set_ai(self, game):
         try:
             self.ai = PacmanAI(self, game)
-            print(f"PacmanAI created: visited_targets={hasattr(self.ai, 'visited_targets')}")
+            print(
+                f"PacmanAI created: visited_targets={hasattr(self.ai, 'visited_targets')}"
+            )
         except Exception as e:
             print(f"Error creating PacmanAI: {e}")
             self.ai = None
@@ -273,7 +82,11 @@ class Pacman:
                 self.respawn_time = now
             return
 
-        if self.invincible and self.respawn_time and now - self.respawn_time > 5000:
+        if (
+            self.invincible
+            and self.respawn_time
+            and now - self.respawn_time > 5000
+        ):
             self.invincible = False
 
         if now - self.last_update_time > self.frame_delay:
@@ -285,7 +98,9 @@ class Pacman:
             if self.desired_direction != pygame.Vector2(0, 0):
                 self.direction = self.desired_direction
 
-        if self.desired_direction != self.direction and self.can_move(self.desired_direction, map_data):
+        if self.desired_direction != self.direction and self.can_move(
+            self.desired_direction, map_data
+        ):
             self.direction = self.desired_direction
 
         if self.can_move(self.direction, map_data):
@@ -365,3 +180,254 @@ class Pacman:
         if self.direction == pygame.Vector2(0, 1):
             return 90
         return 0
+
+
+class PacmanAI:
+    def __init__(self, pacman, game):
+        self.pacman = pacman
+        self.game = game
+        self.mode = None
+        self.visited_targets = set()
+        self.current_path = []
+        self.current_target = None
+        self.last_target_update = 0
+        self.last_direction = pygame.Vector2(0, 0)
+        # Kiểm tra map_data trước khi gọi get_targets
+        if (
+            not hasattr(game, "map_data")
+            or not game.map_data
+            or not game.map_data[0]
+        ):
+            print("Warning: Invalid map_data in PacmanAI")
+            self.targets = []
+        else:
+            self.targets = self.get_targets()
+
+    def manhattan_distance(
+        self, pos1: Tuple[int, int], pos2: Tuple[int, int]
+    ) -> int:
+        return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
+
+    def get_neighbors(self, pos: Tuple[int, int]) -> List[Tuple[int, int]]:
+        x, y = pos
+        neighbors = [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]
+        return [(nx, ny) for nx, ny in neighbors if self.can_move_to(nx, ny)]
+
+    def can_move_to(self, x: int, y: int) -> bool:
+        if (
+            x < 0
+            or x >= len(self.game.map_data[0])
+            or y < 0
+            or y >= len(self.game.map_data)
+            or self.game.map_data[y][x] == "#"
+        ):
+            return False
+        return True
+
+    def is_safe(self, pos: Tuple[int, int]) -> bool:
+        ghost_positions = [
+            (int(ghost.grid_pos.x), int(ghost.grid_pos.y))
+            for ghost in self.game.ghosts
+        ]
+        for ghost_pos in ghost_positions:
+            if self.manhattan_distance(pos, ghost_pos) <= 2:
+                return False
+        return True
+
+    def get_targets(self) -> List[Tuple[int, int]]:
+        current_pos = (int(self.pacman.grid_pos.x), int(self.pacman.grid_pos.y))
+        radius = 6  # Giảm bán kính để tăng tốc
+        targets = []
+        for y in range(
+            max(0, current_pos[1] - radius),
+            min(len(self.game.map_data), current_pos[1] + radius + 1),
+        ):
+            for x in range(
+                max(0, current_pos[0] - radius),
+                min(len(self.game.map_data[0]), current_pos[0] + radius + 1),
+            ):
+                if (
+                    self.game.map_data[y][x] in [".", "o"]
+                    and (x, y) not in self.visited_targets
+                ):
+                    targets.append((x, y))
+
+        targets = sorted(
+            targets, key=lambda t: self.manhattan_distance(current_pos, t)
+        )
+        if not targets:
+            self.visited_targets.clear()
+            return self.get_targets()
+
+        print(f"Targets found: {len(targets)} targets")
+        return targets
+
+    def update_targets(self):
+        if self.current_target:
+            self.visited_targets.add(self.current_target)
+            if self.current_target in self.targets:
+                self.targets.remove(self.current_target)
+        self.current_path = []
+        self.current_target = None
+        self.last_target_update = pygame.time.get_ticks()
+        print(
+            f"Targets remaining: {len(self.targets)}, Visited: {len(self.visited_targets)}"
+        )
+
+    def a_star(self, start: Tuple[int, int]) -> List[Tuple[int, int]]:
+        if not self.targets:
+            return self.get_safe_fallback_path(start)
+
+        target = min(
+            self.targets, key=lambda t: self.manhattan_distance(start, t)
+        )  # Chỉ lấy mục tiêu gần nhất
+        open_set = [(0, start, [start])]
+        came_from = {}
+        g_score = {start: 0}
+        f_score = {start: self.manhattan_distance(start, target)}
+        visited = set()
+
+        while open_set:
+            current_f, current, path = heapq.heappop(open_set)
+            if current == target:
+                self.current_target = target
+                return path
+            if current in visited:
+                continue
+            visited.add(current)
+
+            for neighbor in self.get_neighbors(current):
+                if not self.is_safe(neighbor):
+                    continue
+                tentative_g_score = g_score[current] + 1
+                if (
+                    neighbor not in g_score
+                    or tentative_g_score < g_score[neighbor]
+                ):
+                    came_from[neighbor] = current
+                    g_score[neighbor] = tentative_g_score
+                    f_score[neighbor] = (
+                        tentative_g_score
+                        + self.manhattan_distance(neighbor, target)
+                    )
+                    heapq.heappush(
+                        open_set,
+                        (f_score[neighbor], neighbor, path + [neighbor]),
+                    )
+
+        return self.get_safe_fallback_path(start)
+
+    def bfs(self, start: Tuple[int, int]) -> List[Tuple[int, int]]:
+        if not self.targets:
+            return self.get_safe_fallback_path(start)
+
+        target = min(
+            self.targets, key=lambda t: self.manhattan_distance(start, t)
+        )
+        queue = deque([(start, [start])])
+        visited = {start}
+
+        while queue:
+            current, path = queue.popleft()
+            if current == target:
+                self.current_target = target
+                return path
+
+            for neighbor in self.get_neighbors(current):
+                if neighbor not in visited and self.is_safe(neighbor):
+                    visited.add(neighbor)
+                    queue.append((neighbor, path + [neighbor]))
+
+        return self.get_safe_fallback_path(start)
+
+    def get_safe_fallback_path(
+        self, start: Tuple[int, int]
+    ) -> List[Tuple[int, int]]:
+        neighbors = self.get_neighbors(start)
+        safe_neighbors = [n for n in neighbors if self.is_safe(n)]
+
+        if self.last_direction != pygame.Vector2(0, 0):
+            dx, dy = int(self.last_direction.x), int(self.last_direction.y)
+            next_pos = (start[0] + dx, start[1] + dy)
+            direction = pygame.Vector2(dx, dy)
+            if next_pos in safe_neighbors and self.pacman.can_move(
+                direction, self.game.map_data
+            ):
+                return [start, next_pos]
+
+        unvisited_neighbors = [
+            n for n in safe_neighbors if n not in self.visited_targets
+        ]
+        if unvisited_neighbors:
+            nearest = min(
+                unvisited_neighbors,
+                key=lambda n: self.manhattan_distance(start, n),
+            )
+            return [start, nearest]
+
+        if safe_neighbors:
+            nearest = random.choice(safe_neighbors)
+            return [start, nearest]
+
+        if neighbors:
+            nearest = random.choice(neighbors)
+            return [start, nearest]
+
+        return [start]
+
+    def get_next_move(self) -> pygame.Vector2:
+        if not self.mode:
+            self.current_path = []
+            self.last_direction = pygame.Vector2(0, 0)
+            return pygame.Vector2(0, 0)
+
+        current_pos = (int(self.pacman.grid_pos.x), int(self.pacman.grid_pos.y))
+
+        if self.current_path and len(self.current_path) > 1:
+            next_pos = self.current_path[1]
+            dx = next_pos[0] - current_pos[0]
+            dy = next_pos[1] - current_pos[1]
+            direction = pygame.Vector2(dx, dy)
+            if not self.pacman.can_move(
+                direction, self.game.map_data
+            ) or not self.is_safe(next_pos):
+                self.current_path = []
+
+        if (
+            self.game.map_data[current_pos[1]][current_pos[0]] in [".", "o"]
+            or not self.current_path
+            or pygame.time.get_ticks() - self.last_target_update > 1000
+        ):
+            self.update_targets()
+            self.targets = self.get_targets()
+            if self.mode == "A*":
+                self.current_path = self.a_star(current_pos)
+            elif self.mode == "BFS":
+                self.current_path = self.bfs(current_pos)
+
+        if self.current_path and len(self.current_path) > 1:
+            next_pos = self.current_path[1]
+            dx = next_pos[0] - current_pos[0]
+            dy = next_pos[1] - current_pos[1]
+            direction = pygame.Vector2(dx, dy)
+            if self.pacman.can_move(
+                direction, self.game.map_data
+            ) and self.is_safe(next_pos):
+                self.current_path.pop(0)
+                self.last_direction = direction
+                return direction
+
+        self.current_path = self.get_safe_fallback_path(current_pos)
+        if self.current_path and len(self.current_path) > 1:
+            next_pos = self.current_path[1]
+            dx = next_pos[0] - current_pos[0]
+            dy = next_pos[1] - current_pos[1]
+            direction = pygame.Vector2(dx, dy)
+            if self.pacman.can_move(
+                direction, self.game.map_data
+            ) and self.is_safe(next_pos):
+                self.current_path.pop(0)
+                self.last_direction = direction
+                return direction
+
+        return pygame.Vector2(0, 0)

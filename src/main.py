@@ -53,6 +53,7 @@ def check_collision(pacman, ghost):
     ghost_pos = (int(ghost.grid_pos.x), int(ghost.grid_pos.y))
     return pacman_pos == ghost_pos
 
+<<<<<<< HEAD
 
 def game_over_menu(screen, font):
     # Hiển thị menu khi hết mạng
@@ -137,6 +138,8 @@ def main():
         won = False
         return new_map_data, pacman, ghosts, score, won
 
+=======
+>>>>>>> parent of ca3b12a (change in logic map)
 # ==== MAIN GAME ====
 def main():
     pygame.init()
