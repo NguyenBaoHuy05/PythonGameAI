@@ -88,9 +88,17 @@ class Pacman:
         # Di chuyển Pacman nếu có thể
         if self.can_move(self.direction, map_data):
             self.pixel_pos += self.direction * self.speed
+            if self.pixel_pos.x < 0:
+                self.pixel_pos.x = 27 * TILE_SIZE
+            elif self.pixel_pos.x >= 27 * TILE_SIZE:
+                self.pixel_pos.x = 0
+            if self.pixel_pos.y < 0:
+                self.pixel_pos.y = 30 * TILE_SIZE
+            elif self.pixel_pos.y >= 30 * TILE_SIZE:
+                self.pixel_pos.y = 0
             self.grid_pos = pygame.Vector2(
-                int(self.pixel_pos.x / TILE_SIZE + 0.5),
-                int(self.pixel_pos.y / TILE_SIZE + 0.5),
+                int(self.pixel_pos.x // TILE_SIZE),
+                int(self.pixel_pos.y // TILE_SIZE),
             )
 
     def can_move(self, direction, map_data):
@@ -111,13 +119,7 @@ class Pacman:
         }
 
         for row, col in tiles:
-            if (
-                row < 0
-                or row >= len(map_data)
-                or col < 0
-                or col >= len(map_data[0])
-                or map_data[row][col] == "#"
-            ):
+            if map_data[row][col] == "#":
                 return False
         return True
 
