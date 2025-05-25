@@ -48,38 +48,97 @@ def draw_ui(screen, font, score, lives):
 
 
 def check_win(map_data):
-    return not any("." in row for row in map_data)
+    return not any("." in row or "o" in row for row in map_data)
 
 
-def reset_game(map_file=MAP_FILE):
-    # Load lại map, tạo lại pacman, ghosts, reset điểm, trạng thái
-    new_map_data = load_map(map_file)
-    pacman = Pacman(*find_pacman_start(new_map_data))
-    ghosts = [
-        Ghost(
-            *find_ghost_start(new_map_data, "B"),
-            *find_ghost_start(new_map_data, "B"),
-            "Blinky",
+def check_collision(pacman, ghost):
+    pacman_pos = (int(pacman.grid_pos.x), int(pacman.grid_pos.y))
+    ghost_pos = (int(ghost.grid_pos.x), int(ghost.grid_pos.y))
+    return pacman_pos == ghost_pos
+
+
+def game_over_menu(screen, font):
+    # Hiển thị menu khi hết mạng
+    screen.fill((0, 0, 0))
+    game_over_text = font.render("Game Over!", True, (255, 0, 0))
+    retry_text = font.render(
+        "Chose R to play again or Q to quit", True, (255, 255, 255)
+    )
+
+    screen.blit(
+        game_over_text,
+        game_over_text.get_rect(
+            center=(screen.get_width() // 2, screen.get_height() // 3)
         ),
-        Ghost(
-            *find_ghost_start(new_map_data, "P"),
-            *find_ghost_start(new_map_data, "P"),
-            "Pinky",
+    )
+    screen.blit(
+        retry_text,
+        retry_text.get_rect(
+            center=(screen.get_width() // 2, screen.get_height() // 2)
         ),
-        Ghost(
-            *find_ghost_start(new_map_data, "I"),
-            *find_ghost_start(new_map_data, "I"),
-            "Inky",
-        ),
-        Ghost(
-            *find_ghost_start(new_map_data, "C"),
-            *find_ghost_start(new_map_data, "C"),
-            "Clyde",
-        ),
-    ]
-    score = 0
-    won = False
-    return new_map_data, pacman, ghosts, score, won
+    )
+
+    pygame.display.flip()
+
+    waiting = True
+    while waiting:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_r:
+                    waiting = False
+                    return "retry"
+                elif event.key == pygame.K_q:
+                    pygame.quit()
+                    sys.exit()
+
+
+# ==== MAIN GAME ====
+def main():
+    pygame.init()
+    font = pygame.font.SysFont("arial", 24)
+
+    # Tải map để lấy kích thước màn hình
+    map_data = load_map(MAP_FILE)
+    MAP_WIDTH = len(map_data[0])
+    MAP_HEIGHT = len(map_data)
+
+    screen = pygame.display.set_mode(
+        (MAP_WIDTH * TILE_SIZE, MAP_HEIGHT * TILE_SIZE)
+    )
+    pygame.display.set_caption("Pacman")
+
+    def reset_game():
+        # Load lại map, tạo lại pacman, ghosts, reset điểm, trạng thái
+        new_map_data = load_map(MAP_FILE)
+        pacman = Pacman(*find_pacman_start(new_map_data))
+        ghosts = [
+            Ghost(
+                *find_ghost_start(new_map_data, "B"),
+                *find_ghost_start(new_map_data, "B"),
+                "Blinky",
+            ),
+            Ghost(
+                *find_ghost_start(new_map_data, "P"),
+                *find_ghost_start(new_map_data, "P"),
+                "Pinky",
+            ),
+            Ghost(
+                *find_ghost_start(new_map_data, "I"),
+                *find_ghost_start(new_map_data, "I"),
+                "Inky",
+            ),
+            Ghost(
+                *find_ghost_start(new_map_data, "C"),
+                *find_ghost_start(new_map_data, "C"),
+                "Clyde",
+            ),
+        ]
+        score = 0
+        won = False
+        return new_map_data, pacman, ghosts, score, won
 
 
 def main():
@@ -113,7 +172,7 @@ def main():
     chase_time = 10000
     scatter_time = 5000
     chase_mode = False
-    clock = pygame.time.Clock()
+    clock = pygame.time.Clock()  # Sửa typo từ pygame.clock
     running = True
     paused = False
 
@@ -121,17 +180,6 @@ def main():
         now = pygame.time.get_ticks()
         dt = clock.tick(FPS)
         screen.fill((0, 0, 0))
-
-        if paused:
-            result = pause_menu(screen, font)
-            if result == "menu":
-                menu_result = main_menu(screen)
-                if menu_result != "play":
-                    running = False
-                paused = False
-            elif result == "resume":
-                paused = False
-            continue
 
         # === XỬ LÝ SỰ KIỆN ===
         for event in pygame.event.get():
@@ -172,6 +220,7 @@ def main():
             continue
 
         if pacman.lives > 0:
+
             if pacman.alive:
                 x, y = int(pacman.grid_pos.x), int(pacman.grid_pos.y)
                 if map_data[y][x] == ".":
@@ -197,11 +246,11 @@ def main():
                         last_time = now
             pacman.update(map_data)
 
-            draw_map(screen, map_data)
-            pacman.draw(screen)
-            for ghost in ghosts:
+            draw_map(screen, game.map_data)
+            game.pacman.draw(screen)
+            for ghost in game.ghosts:
                 ghost.draw(screen)
-            draw_ui(screen, font, score, pacman.lives)
+            draw_ui(screen, font, score, game.pacman.lives)
 
             if won:
                 result = victory_menu(screen, font, score)
@@ -214,15 +263,11 @@ def main():
                     else:
                         running = False
         else:
-            action = game_over_menu(screen, font, score)
+            # Hết mạng
+            action = game_over_menu(screen, font)
             if action == "retry":
+                # Reset game khi chơi lại
                 map_data, pacman, ghosts, score, won = reset_game()
-            elif action == "menu":
-                menu_result = main_menu(screen)
-                if menu_result == "play":
-                    map_data, pacman, ghosts, score, won = reset_game()
-                else:
-                    running = False
 
         pygame.display.flip()
 
