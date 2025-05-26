@@ -1,6 +1,5 @@
 import pygame
 import os
-import random
 
 TILE_SIZE = 20
 
@@ -19,12 +18,10 @@ class Pacman:
         self.alive = True
         self.invincible = False
         self.eatGhost = 0
-
         self.fade_alpha = 255
 
         self.death_time = None
         self.respawn_time = None
-        self.inx = 0
 
         # Load animation frames
         self.frames = [
@@ -49,13 +46,11 @@ class Pacman:
         self.invincible = False
         self.death_time = None
         self.respawn_time = None
-        self.eatGhost = 0
-        self.inx = 0
 
     def set_direction(self, dx, dy):
         self.desired_direction = pygame.Vector2(dx, dy)
 
-    def update(self, map_data, ghosts):
+    def update(self, map_data):
         now = pygame.time.get_ticks()
         if not self.alive:
             elapsed = now - self.death_time
@@ -84,6 +79,12 @@ class Pacman:
             self.current_frame = (self.current_frame + 1) % len(self.frames)
             self.last_update_time = now
 
+        # Đổi hướng nếu có thể
+        if self.desired_direction != self.direction and self.can_move(
+            self.desired_direction, map_data
+        ):
+            self.direction = self.desired_direction
+
         # Di chuyển Pacman nếu có thể
         if self.can_move(self.direction, map_data):
             self.pixel_pos += self.direction * self.speed
@@ -99,29 +100,6 @@ class Pacman:
                 int(self.pixel_pos.x // TILE_SIZE),
                 int(self.pixel_pos.y // TILE_SIZE),
             )
-        if self.inx % 5:
-            self.ReflexAgent(map_data, ghosts)
-        else:
-            self.change_direction(map_data)
-        self.inx += 1
-
-    def change_direction(self, map_data, other_direction=None):
-        directions = [
-            pygame.Vector2(1, 0),
-            pygame.Vector2(-1, 0),
-            pygame.Vector2(0, 1),
-            pygame.Vector2(0, -1),
-        ]
-        do_directions = other_direction if other_direction else self.direction
-        random.shuffle(directions)
-        i = 0
-        for d in directions:
-            if d != -do_directions and self.can_move(d, map_data):
-                i += 1
-                self.direction = d
-                break
-        if i == 0:
-            self.direction = -do_directions
 
     def can_move(self, direction, map_data):
         if direction.length_squared() == 0:
@@ -180,100 +158,3 @@ class Pacman:
         if self.direction == pygame.Vector2(0, 1):
             return 90
         return 0
-
-    def get_cost(self, map_data, current_pos, ghosts):
-        cost = 1
-        directions = [
-            pygame.Vector2(0, -1),
-            pygame.Vector2(0, 1),
-            pygame.Vector2(-1, 0),
-            pygame.Vector2(1, 0),
-        ]
-        for ghost in ghosts:
-            if ghost.frightened_timer > 0:
-                dist_to_ghost = abs(current_pos.x - ghost.grid_pos.x) + abs(
-                    current_pos.y - ghost.grid_pos.y
-                )
-                if dist_to_ghost <= 5:
-                    cost -= (5 - dist_to_ghost) * 10000
-                if map_data[int(current_pos.y)][int(current_pos.x)] == "o":
-                    cost -= 100000
-            else:
-                dist_to_ghost = abs(current_pos.x - ghost.grid_pos.x) + abs(
-                    current_pos.y - ghost.grid_pos.y
-                )
-                if dist_to_ghost == 0:
-                    cost += 100000
-                elif dist_to_ghost == 1:
-                    cost += 40000
-                else:
-                    dist_to_pacman = abs(current_pos.x - self.grid_pos.x) + abs(
-                        current_pos.y - self.grid_pos.y
-                    )
-                    cost += (dist_to_ghost - dist_to_pacman) * 10000
-        if map_data[int(current_pos.y)][int(current_pos.x)] == ".":
-            cost -= 100
-        for direction in directions:
-            if directions == -self.direction:
-                continue
-            next_pos = current_pos + direction
-            if next_pos.x < 0:
-                next_pos.x = 26
-            elif next_pos.x >= 27:
-                next_pos.x = 0
-            if next_pos.y < 0:
-                next_pos.y = 29
-            elif next_pos.y > 30:
-                next_pos.y = 0
-            if (
-                map_data[int(next_pos.y)][int(next_pos.x)] != "#"
-                and next_pos != self.grid_pos
-            ):
-
-                cost -= 20000
-
-        return cost
-
-    def ReflexAgent(self, map_data, ghosts):
-        directions = [
-            pygame.Vector2(0, -1),
-            pygame.Vector2(0, 1),
-            pygame.Vector2(-1, 0),
-            pygame.Vector2(1, 0),
-        ]
-        best_direction = self.direction
-        min_cost = float("inf")
-
-        reverse_direction = -self.direction
-
-        for direction in directions:
-            if direction == reverse_direction:
-                continue
-            cost = 0
-            current_pos = self.grid_pos + direction
-            if current_pos.x < 0:
-                current_pos.x = 26
-            elif current_pos.x > 26:
-                current_pos.x = 0
-            if current_pos.y < 0:
-                current_pos.y = 29
-            elif current_pos.y > 29:
-                current_pos.y = 0
-            while (
-                map_data[int(current_pos.y)][int(current_pos.x)] != "#"
-                and current_pos != self.grid_pos
-            ):
-                cost += self.get_cost(map_data, current_pos, ghosts)
-                current_pos += direction
-                if current_pos.x < 0:
-                    current_pos.x = 26
-                elif current_pos.x >= 26:
-                    current_pos.x = 0
-                if current_pos.y < 0:
-                    current_pos.y = 29
-                elif current_pos.y >= 29:
-                    current_pos.y = 0
-            if cost < min_cost:
-                min_cost = cost
-                best_direction = direction
-        self.direction = best_direction

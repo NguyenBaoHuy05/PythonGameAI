@@ -243,7 +243,7 @@ def main():
                     if now - last_time > scatter_time:
                         chase_mode = True
                         last_time = now
-            pacman.update(map_data, ghosts)
+            pacman.update(map_data)
 
             draw_map(screen, map_data)
             pacman.draw(screen)

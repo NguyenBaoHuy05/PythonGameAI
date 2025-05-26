@@ -170,7 +170,7 @@ class Ghost:
             return
 
         if chase_mode and random.random() > 0.3:
-            move, _ = alg.bfs_direction(
+            move = alg.bfs_direction(
                 map_data,
                 (int(self.grid_pos.x), int(self.grid_pos.y)),
                 (int(pacman.grid_pos.x), int(pacman.grid_pos.y)),

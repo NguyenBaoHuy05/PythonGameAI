@@ -123,7 +123,7 @@ def bfs_direction(map_data, start, goal):
         node = visited[node]
     dx = node[0] - start[0]
     dy = node[1] - start[1]
-    return ((dx, dy) if (dx, dy) != (0, 0) else (0, 0)), op
+    return (dx, dy) if (dx, dy) != (0, 0) else (0, 0)
 
 
 def heuristic(a, b):
