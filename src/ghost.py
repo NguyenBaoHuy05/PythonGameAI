@@ -2,7 +2,6 @@ import pygame
 import os
 import random
 import algorithms as alg
-import math
 
 TILE_SIZE = 20
 
@@ -171,7 +170,7 @@ class Ghost:
             return
 
         if chase_mode and random.random() > 0.3:
-            move = alg.bfs_direction(
+            move, _ = alg.bfs_direction(
                 map_data,
                 (int(self.grid_pos.x), int(self.grid_pos.y)),
                 (int(pacman.grid_pos.x), int(pacman.grid_pos.y)),
@@ -183,9 +182,9 @@ class Ghost:
                 else self.direction
             )
             self.change_direction(map_data, move_direction)
-            if self.can_move(move_direction, map_data, (self.speed + 1.5)):
+            if self.can_move(move_direction, map_data, (self.speed + 1)):
                 self.direction = move_direction
-                self.pixel_pos += self.direction * (self.speed + 1.5)
+                self.pixel_pos += self.direction * (self.speed + 1)
                 self.grid_pos = pygame.Vector2(
                     int(self.pixel_pos.x // TILE_SIZE),
                     int(self.pixel_pos.y // TILE_SIZE),
@@ -206,7 +205,8 @@ class Ghost:
         if self.is_colliding_with(pacman):
             if self.frightened_timer > 0:
                 self.set_alive(map_data, self.grid_pos, self.home_pos)
-            elif self.alive and pacman.alive:
+                pacman.eatGhost += 1
+            elif self.alive and pacman.alive and not pacman.invincible:
                 pacman.set_dead()
 
     def is_colliding_with(self, pacman):
@@ -251,10 +251,14 @@ class Ghost:
         ]
         do_directions = other_direction if other_direction else self.direction
         random.shuffle(directions)
+        i = 0
         for d in directions:
             if d != -do_directions and self.can_move(d, map_data):
+                i += 1
                 self.direction = d
                 break
+        if i == 0:
+            self.direction = -do_directions
 
     def draw(self, screen):
         if self.frightened_timer > 0:

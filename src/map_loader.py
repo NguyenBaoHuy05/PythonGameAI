@@ -42,3 +42,21 @@ def find_ghost_start(map_data, type="G"):
             if tile == type:
                 return x, y
     return 1, 1
+
+
+def all_dot_pos(map_data):
+    all_pos = []
+    for y, row in enumerate(map_data):
+        for x, tile in enumerate(row):
+            if tile == ".":
+                all_pos.append((x, y))
+    return all_pos
+
+
+def all_Power_pos(map_data):
+    all_pos = []
+    for y, row in enumerate(map_data):
+        for x, tile in enumerate(row):
+            if tile == ".":
+                all_pos.append((x, y))
+    return all_pos
