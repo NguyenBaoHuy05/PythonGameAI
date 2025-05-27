@@ -1,99 +1,132 @@
 import random
+from collections import deque
+
+ROWS, COLS = 31, 28
+WALL_RATIO = 0.3
 
 
-def count_adjacent_paths(grid, x, y, height, width):
-    # Count adjacent cells that are not walls
-    paths = 0
-    directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]  # Up, down, left, right
-    for dx, dy in directions:
-        nx, ny = x + dx, y + dy
-        if 0 <= nx < height and 0 <= ny < width and grid[nx][ny] != "#":
-            paths += 1
-    return paths
+def is_valid(r, c):
+    return 0 <= r < ROWS and 0 <= c < COLS
 
 
-def ensure_two_paths(grid, height, width):
-    # Ensure each non-wall cell has at least 2 adjacent paths
-    directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
-    for i in range(1, height - 1):
-        for j in range(1, width - 1):
-            if grid[i][j] != "#":
-                paths = count_adjacent_paths(grid, i, j, height, width)
-                if paths < 2:
-                    # Randomly open a wall to create at least 2 paths
-                    random.shuffle(directions)
-                    for dx, dy in directions:
-                        ni, nj = i + dx, j + dy
-                        if (
-                            0 <= ni < height
-                            and 0 <= nj < width
-                            and grid[ni][nj] == "#"
-                        ):
-                            grid[ni][nj] = "."
-                            paths += 1
-                            if paths >= 2:
-                                break
+def neighbors(r, c):
+    for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+        nr, nc = r + dr, c + dc
+        if is_valid(nr, nc):
+            yield nr, nc
 
 
-def generate_pacman_map(
-    height=31, width=28, wall_density=0.3, power_pellet_count=4
-):
-    # Initialize grid with walls
-    grid = [["#" for _ in range(width)] for _ in range(height)]
+def bfs_check_connectivity(grid):
+    visited = [[False] * COLS for _ in range(ROWS)]
+    start = None
 
-    # Create initial paths
-    for i in range(1, height - 1):
-        for j in range(1, width - 1):
-            if random.random() > wall_density:
-                grid[i][j] = "."
-
-    # Ensure border is all walls
-    for i in range(height):
-        grid[i][0] = grid[i][width - 1] = "#"
-    for j in range(width):
-        grid[0][j] = grid[height - 1][j] = "#"
-
-    # Ensure each non-wall cell has at least 2 paths
-    ensure_two_paths(grid, height, width)
-
-    # Place power pellets (o)
-    placed_power_pellets = 0
-    while placed_power_pellets < power_pellet_count:
-        x, y = random.randint(1, height - 2), random.randint(1, width - 2)
-        if (
-            grid[x][y] == "."
-            and count_adjacent_paths(grid, x, y, height, width) >= 2
-        ):
-            grid[x][y] = "o"
-            placed_power_pellets += 1
-
-    # Place Pac-Man (M)
-    while True:
-        x, y = random.randint(1, height - 2), random.randint(1, width - 2)
-        if (
-            grid[x][y] == "."
-            and count_adjacent_paths(grid, x, y, height, width) >= 2
-        ):
-            grid[x][y] = "M"
-            break
-
-    # Place ghosts (C, I, B, P)
-    ghosts = ["C", "I", "B", "P"]
-    for ghost in ghosts:
-        while True:
-            x, y = random.randint(1, height - 2), random.randint(1, width - 2)
-            if (
-                grid[x][y] == "."
-                and count_adjacent_paths(grid, x, y, height, width) >= 2
-            ):
-                grid[x][y] = ghost
+    # Tìm ô đầu tiên không phải tường
+    for r in range(ROWS):
+        for c in range(COLS):
+            if grid[r][c] != "#":
+                start = (r, c)
                 break
+        if start:
+            break
+    if not start:
+        return False
+
+    q = deque([start])
+    visited[start[0]][start[1]] = True
+    count = 1
+    total_free = sum(
+        row.count(".")
+        + row.count("o")
+        + row.count("M")
+        + row.count("C")
+        + row.count("I")
+        + row.count("B")
+        + row.count("P")
+        for row in grid
+    )
+
+    while q:
+        r, c = q.popleft()
+        for nr, nc in neighbors(r, c):
+            if not visited[nr][nc] and grid[nr][nc] != "#":
+                visited[nr][nc] = True
+                q.append((nr, nc))
+                count += 1
+
+    return count == total_free
+
+
+def has_dead_end(grid):
+    for r in range(1, ROWS - 1):
+        for c in range(1, COLS - 1):
+            if grid[r][c] != "#":
+                open_neighbors = sum(
+                    1 for nr, nc in neighbors(r, c) if grid[nr][nc] != "#"
+                )
+                if open_neighbors <= 1:
+                    return True
+    return False
+
+
+def create_map():
+    grid = [["." for _ in range(COLS)] for _ in range(ROWS)]
+
+    # Viền tường ngoài
+    for r in range(ROWS):
+        grid[r][0] = "#"
+        grid[r][COLS - 1] = "#"
+    for c in range(COLS):
+        grid[0][c] = "#"
+        grid[ROWS - 1][c] = "#"
+
+    wall_cells = int(ROWS * COLS * WALL_RATIO)
+    placed_walls = 0
+    attempts = 0
+    max_attempts = wall_cells * 5
+
+    while placed_walls < wall_cells and attempts < max_attempts:
+        r = random.randint(1, ROWS - 2)
+        c = random.randint(1, COLS - 2)
+        if grid[r][c] == ".":
+            grid[r][c] = "#"
+            if bfs_check_connectivity(grid) and not has_dead_end(grid):
+                placed_walls += 1
+            else:
+                grid[r][c] = "."
+        attempts += 1
+
+    pellet_positions = [
+        (1, 1),
+        (1, COLS - 2),
+        (ROWS - 2, 1),
+        (ROWS - 2, COLS - 2),
+    ]
+    for r, c in pellet_positions:
+        grid[r][c] = "o"
+
+    mid_r, mid_c = ROWS // 2 + 2, COLS // 2
+    grid[mid_r][mid_c] = "M"
+
+    ghost_row = ROWS // 2
+    ghost_positions = [
+        (ghost_row, COLS // 2 - 2),
+        (ghost_row, COLS // 2 - 1),
+        (ghost_row, COLS // 2),
+        (ghost_row, COLS // 2 + 1),
+    ]
+    ghosts = ["C", "I", "B", "P"]
+    for (r, c), g in zip(ghost_positions, ghosts):
+        grid[r][c] = g
 
     return grid
 
 
-# Generate and print the map for visualization
-random.seed()  # For reproducibility, remove for true randomness
-map_array = generate_pacman_map()
-for row in map_array:
-    print("".join(row))
+def print_map(grid):
+    for row in grid:
+        print("".join(row))
+
+
+if __name__ == "__main__":
+    random.seed()  # Có thể set seed cố định nếu cần kết quả ổn định
+    game_map = create_map()
+    print_map(game_map)

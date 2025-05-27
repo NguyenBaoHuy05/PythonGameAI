@@ -2,14 +2,13 @@ from statistics import mode
 import pygame
 import sys
 
-# from map_generator import generate_pacman_map
+from map_generator import create_map
 from ghost import Ghost
 from pacman import Pacman
 from map_loader import (
     load_map,
     find_pacman_start,
     find_ghost_start,
-    all_dot_pos,
     all_Power_pos,
 )
 from menu import (
@@ -22,7 +21,7 @@ from menu import (
 
 # ==== CẤU HÌNH ====
 TILE_SIZE = 20
-MAP_FILE = "../assets/maps/level2.txt"
+MAP_FILE = "../assets/maps/level4.txt"
 FPS = 60
 WHITE = (255, 255, 255)
 BLUE = (0, 0, 255)
@@ -58,6 +57,7 @@ def check_win(map_data):
 
 def reset_game(mode):
     new_map_data = load_map(MAP_FILE)
+    # new_map_data = create_map()
     pacman = Pacman(*find_pacman_start(new_map_data), algorithm=mode)
     ghosts = [
         Ghost(
@@ -81,8 +81,6 @@ def reset_game(mode):
             "Clyde",
         ),
     ]
-    all_dot_position = all_dot_pos(new_map_data)
-    all_Power_position = all_Power_pos(new_map_data)
     score = 0
     won = False
     return (
@@ -91,8 +89,6 @@ def reset_game(mode):
         ghosts,
         score,
         won,
-        all_dot_position,
-        all_Power_position,
     )
 
 
@@ -101,6 +97,7 @@ def main():
     font = pygame.font.SysFont("arial", 24)
 
     map_data = load_map(MAP_FILE)
+    # map_data = create_map()
     MAP_WIDTH = len(map_data[0])
     MAP_HEIGHT = len(map_data)
 
@@ -114,9 +111,7 @@ def main():
         pygame.quit()
         sys.exit()
 
-    map_data, pacman, ghosts, score, won, all_dot_pos, all_Power_pos = (
-        reset_game(mode)
-    )
+    map_data, pacman, ghosts, score, won = reset_game(mode)
 
     last_time = pygame.time.get_ticks()
     chase_time = 15000
@@ -148,8 +143,6 @@ def main():
                                     ghosts,
                                     score,
                                     won,
-                                    all_dot_pos,
-                                    all_Power_pos,
                                 ) = reset_game(mode)
                             else:
                                 running = False
@@ -178,14 +171,10 @@ def main():
                 if map_data[y][x] == ".":
                     map_data[y][x] = " "
                     score += 10
-                    if (y, x) in all_dot_pos:
-                        all_dot_pos.remove((y, x))
                     if check_win(map_data):
                         won = True
                 elif map_data[y][x] == "o":
                     map_data[y][x] = " "
-                    if (y, x) in all_Power_pos:
-                        all_Power_pos.remove((y, x))
                     score += 50
                     for ghost in ghosts:
                         ghost.set_frightened()
@@ -218,8 +207,6 @@ def main():
                         ghosts,
                         score,
                         won,
-                        all_dot_pos,
-                        all_Power_pos,
                     ) = reset_game(mode)
                 elif result == "menu":
                     mode = main_menu(screen)
@@ -230,8 +217,6 @@ def main():
                             ghosts,
                             score,
                             won,
-                            all_dot_pos,
-                            all_Power_pos,
                         ) = reset_game(mode)
                     else:
                         running = False
@@ -244,8 +229,6 @@ def main():
                     ghosts,
                     score,
                     won,
-                    all_dot_pos,
-                    all_Power_pos,
                 ) = reset_game(mode)
             elif action == "menu":
                 mode = main_menu(screen)
@@ -256,8 +239,6 @@ def main():
                         ghosts,
                         score,
                         won,
-                        all_dot_pos,
-                        all_Power_pos,
                     ) = reset_game(mode)
                 else:
                     running = False

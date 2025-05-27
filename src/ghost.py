@@ -151,23 +151,18 @@ class Ghost:
             return
         self.check_collision(map_data, pacman)
         if self.frightened_timer > 0:
-            near_direction = pygame.Vector2(
-                alg.near_pacman(
-                    map_data,
-                    (int(self.grid_pos.x), int(self.grid_pos.y)),
-                    (int(pacman.grid_pos.x), int(pacman.grid_pos.y)),
-                )
-            )
-            self.change_direction(map_data, near_direction)
-            if self.can_move(self.direction, map_data):
-                self.pixel_pos += self.direction * self.speed
-                self.grid_pos = pygame.Vector2(
-                    int(self.pixel_pos.x // TILE_SIZE),
-                    int(self.pixel_pos.y // TILE_SIZE),
-                )
-            else:
-                self.change_direction(map_data, self.direction)
-            return
+            if now - self.last_update_time > self.frame_delay + 100:
+                near_direction = self.direction
+                if self.frightened_timer > 60:
+                    target_dir = alg.near_pacman(
+                        map_data,
+                        (int(self.grid_pos.x), int(self.grid_pos.y)),
+                        (int(pacman.grid_pos.x), int(pacman.grid_pos.y)),
+                    )
+                    near_direction = pygame.Vector2(target_dir)
+
+                self.direction = near_direction
+                self.last_update_time = now
 
         if chase_mode and random.random() > 0.3:
             move = alg.bfs_direction(
@@ -251,14 +246,10 @@ class Ghost:
         ]
         do_directions = other_direction if other_direction else self.direction
         random.shuffle(directions)
-        i = 0
         for d in directions:
             if d != -do_directions and self.can_move(d, map_data):
-                i += 1
                 self.direction = d
                 break
-        if i == 0:
-            self.direction = -do_directions
 
     def draw(self, screen):
         if self.frightened_timer > 0:

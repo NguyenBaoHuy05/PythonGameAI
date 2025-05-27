@@ -6,27 +6,49 @@ import heapq
 directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 
 
+def bfs_len(map_data, start, goal):
+    queue = deque([start])
+    visited = {start: None}
+    directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+    rows, cols = len(map_data), len(map_data[0])
+
+    while queue:
+        current = queue.popleft()
+        if current == goal:
+            break
+        for dx, dy in directions:
+            nx, ny = current[0] + dx, current[1] + dy
+            if 0 <= ny < rows and 0 <= nx < cols:
+                if map_data[ny][nx] != "#" and (nx, ny) not in visited:
+                    visited[(nx, ny)] = current
+                    queue.append((nx, ny))
+
+    if goal not in visited:
+        return float("inf")
+
+    # Truy ngược để đếm số bước
+    length = 0
+    node = goal
+    while visited[node] is not None:
+        node = visited[node]
+        length += 1
+    return length
+
+
 def near_pacman(map_data, start, pacman_pos):
-    if random.random() < 0.02:
-        d = random.choice(directions)
-        nx, ny = start[0] + d[0], start[1] + d[1]
-        if 0 <= ny < len(map_data) and 0 <= nx < len(map_data[0]):
-            if map_data[ny][nx] != "#":
-                return (nx, ny)
-    worst_direction = (0, 0)
-    max_distance = -1
+    best_dir = (1, 0)
+    max_dist = -float("inf")
 
     for dx, dy in directions:
         nx, ny = start[0] + dx, start[1] + dy
         if 0 <= ny < len(map_data) and 0 <= nx < len(map_data[0]):
             if map_data[ny][nx] != "#":
-                distance = sqrt(
-                    (nx - pacman_pos[0]) ** 2 + (ny - pacman_pos[1]) ** 2
-                )
-                if distance < max_distance:
-                    max_distance = distance
-                    worst_direction = (dx, dy)
-    return worst_direction
+                dist = bfs_len(map_data, (nx, ny), pacman_pos)
+                if dist > max_dist:
+                    max_dist = dist
+                    best_dir = (dx, dy)
+
+    return best_dir
 
 
 def dfs_shortest_path(map_data, start, goal):
