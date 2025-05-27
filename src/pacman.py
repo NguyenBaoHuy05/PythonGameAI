@@ -84,9 +84,7 @@ class Pacman:
             elapsed = now - self.death_time
             if now - self.death_time < 2000:
                 self.fade_alpha = max(255 - int((elapsed / 2000) * 255), 0)
-                print(elapsed)
             else:
-                print("Pacman died")
                 self.lives -= 1
                 self.reset_position()
                 self.invincible = True
@@ -101,9 +99,13 @@ class Pacman:
             self.last_update_time = now
 
         if self.alive:
-            ghost_positions = [(int(ghost.grid_pos.x), int(ghost.grid_pos.y)) for ghost in ghosts if ghost.alive]
+            # Chỉ né các ghost không ở trạng thái frightened và còn sống
+            ghost_positions = [(int(ghost.grid_pos.x), int(ghost.grid_pos.y)) for ghost in ghosts if ghost.alive and ghost.frightened_timer <= 0]
             pacman_pos = (int(self.grid_pos.x), int(self.grid_pos.y))
-            ghost_near = any(abs(pacman_pos[0] - gp[0]) + abs(pacman_pos[1] - gp[1]) <= 2 for gp in ghost_positions)
+            ghost_near = any(
+                abs(pacman_pos[0] - gp[0]) + abs(pacman_pos[1] - gp[1]) <= 2
+                for gp in ghost_positions
+            )
 
             if ghost_near and not self.invincible:
                 target = self.find_safest_position(map_data, ghost_positions)
@@ -114,7 +116,7 @@ class Pacman:
                 move = a_star_direction(map_data, pacman_pos, target, ghost_positions=ghost_positions)
                 self.set_direction(move[0], move[1])
             elif self.algorithm == "bfs":
-                move = bfs_direction(map_data, pacman_pos, target)
+                move = bfs_direction(map_data, pacman_pos, target, ghost_positions=ghost_positions)
                 self.set_direction(move[0], move[1])
 
         if self.desired_direction != self.direction and self.can_move(self.desired_direction, map_data):
