@@ -1,6 +1,8 @@
 from statistics import mode
 import pygame
 import sys
+
+# from map_generator import generate_pacman_map
 from ghost import Ghost
 from pacman import Pacman
 from map_loader import (
@@ -20,12 +22,13 @@ from menu import (
 
 # ==== CẤU HÌNH ====
 TILE_SIZE = 20
-MAP_FILE = "../assets/maps/level1.txt"
+MAP_FILE = "../assets/maps/level2.txt"
 FPS = 60
 WHITE = (255, 255, 255)
 BLUE = (0, 0, 255)
 YELLOW = (255, 255, 0)
 ORANGE = (255, 150, 0)
+
 
 # ==== HÀM TIỆN ÍCH ====
 def draw_map(screen, map_data):
@@ -41,14 +44,17 @@ def draw_map(screen, map_data):
             elif tile == "o":
                 pygame.draw.circle(screen, ORANGE, rect.center, 6)
 
+
 def draw_ui(screen, font, score, lives):
     score_text = font.render(f"Score: {score}", True, WHITE)
     lives_text = font.render(f"Lives: {lives}", True, WHITE)
     screen.blit(score_text, (10, 10))
     screen.blit(lives_text, (10, 40))
 
+
 def check_win(map_data):
     return not any("." in row or "o" in row for row in map_data)
+
 
 def reset_game(mode):
     new_map_data = load_map(MAP_FILE)
@@ -89,6 +95,7 @@ def reset_game(mode):
         all_Power_position,
     )
 
+
 def main():
     pygame.init()
     font = pygame.font.SysFont("arial", 24)
@@ -107,7 +114,9 @@ def main():
         pygame.quit()
         sys.exit()
 
-    map_data, pacman, ghosts, score, won, all_dot_pos, all_Power_pos = reset_game(mode)
+    map_data, pacman, ghosts, score, won, all_dot_pos, all_Power_pos = (
+        reset_game(mode)
+    )
 
     last_time = pygame.time.get_ticks()
     chase_time = 15000
@@ -133,7 +142,15 @@ def main():
                         if result == "menu":
                             mode = main_menu(screen)
                             if mode in ["a_star", "bfs"]:
-                                map_data, pacman, ghosts, score, won, all_dot_pos, all_Power_pos = reset_game(mode)
+                                (
+                                    map_data,
+                                    pacman,
+                                    ghosts,
+                                    score,
+                                    won,
+                                    all_dot_pos,
+                                    all_Power_pos,
+                                ) = reset_game(mode)
                             else:
                                 running = False
                             paused = False
@@ -144,7 +161,9 @@ def main():
                     pacman.draw(screen)
                     for ghost in ghosts:
                         ghost.draw(screen)
-                    draw_ui(screen, font, score + pacman.eatGhost * 30, pacman.lives)
+                    draw_ui(
+                        screen, font, score + pacman.eatGhost * 30, pacman.lives
+                    )
                     pygame.display.flip()
 
         if paused:
@@ -189,23 +208,57 @@ def main():
             draw_ui(screen, font, score + pacman.eatGhost * 30, pacman.lives)
 
             if won:
-                result = victory_menu(screen, font, score + pacman.eatGhost * 30)
+                result = victory_menu(
+                    screen, font, score + pacman.eatGhost * 30
+                )
                 if result == "next":
-                    map_data, pacman, ghosts, score, won, all_dot_pos, all_Power_pos = reset_game(mode)
+                    (
+                        map_data,
+                        pacman,
+                        ghosts,
+                        score,
+                        won,
+                        all_dot_pos,
+                        all_Power_pos,
+                    ) = reset_game(mode)
                 elif result == "menu":
                     mode = main_menu(screen)
                     if mode in ["a_star", "bfs"]:
-                        map_data, pacman, ghosts, score, won, all_dot_pos, all_Power_pos = reset_game(mode)
+                        (
+                            map_data,
+                            pacman,
+                            ghosts,
+                            score,
+                            won,
+                            all_dot_pos,
+                            all_Power_pos,
+                        ) = reset_game(mode)
                     else:
                         running = False
         else:
             action = game_over_menu(screen, font, score + pacman.eatGhost * 30)
             if action == "retry":
-                map_data, pacman, ghosts, score, won, all_dot_pos, all_Power_pos = reset_game(mode)
+                (
+                    map_data,
+                    pacman,
+                    ghosts,
+                    score,
+                    won,
+                    all_dot_pos,
+                    all_Power_pos,
+                ) = reset_game(mode)
             elif action == "menu":
                 mode = main_menu(screen)
                 if mode in ["a_star", "bfs"]:
-                    map_data, pacman, ghosts, score, won, all_dot_pos, all_Power_pos = reset_game(mode)
+                    (
+                        map_data,
+                        pacman,
+                        ghosts,
+                        score,
+                        won,
+                        all_dot_pos,
+                        all_Power_pos,
+                    ) = reset_game(mode)
                 else:
                     running = False
 
@@ -213,6 +266,7 @@ def main():
 
     pygame.quit()
     sys.exit()
+
 
 if __name__ == "__main__":
     main()

@@ -5,6 +5,7 @@ import heapq
 
 directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 
+
 def near_pacman(map_data, start, pacman_pos):
     if random.random() < 0.02:
         d = random.choice(directions)
@@ -26,6 +27,7 @@ def near_pacman(map_data, start, pacman_pos):
                     max_distance = distance
                     worst_direction = (dx, dy)
     return worst_direction
+
 
 def dfs_shortest_path(map_data, start, goal):
     stack = [start]
@@ -51,6 +53,7 @@ def dfs_shortest_path(map_data, start, goal):
             return []
     path.reverse()
     return path
+
 
 def bfs_shortest_path(map_data, start, goal):
     queue = deque()
@@ -78,6 +81,7 @@ def bfs_shortest_path(map_data, start, goal):
             return []
     path.reverse()
     return path
+
 
 def bfs_direction(map_data, start, goal, ghost_positions=None):
     if ghost_positions is None:
@@ -121,8 +125,10 @@ def bfs_direction(map_data, start, goal, ghost_positions=None):
     dy = node[1] - start[1]
     return (dx, dy) if (dx, dy) != (0, 0) else (0, 0)
 
+
 def heuristic(a, b):
     return abs(a[0] - b[0]) + abs(a[1] - b[1])
+
 
 def a_star_direction(map_data, start, goal, ghost_positions=None):
     if ghost_positions is None:
@@ -148,10 +154,15 @@ def a_star_direction(map_data, start, goal, ghost_positions=None):
                     elif dist_to_ghost <= 4:
                         ghost_cost += 20
                 tentative_g_score = current_g + 1 + ghost_cost
-                if neighbor not in g_score or tentative_g_score < g_score[neighbor]:
+                if (
+                    neighbor not in g_score
+                    or tentative_g_score < g_score[neighbor]
+                ):
                     g_score[neighbor] = tentative_g_score
                     f_score = tentative_g_score + heuristic(neighbor, goal)
-                    heapq.heappush(open_set, (f_score, tentative_g_score, neighbor))
+                    heapq.heappush(
+                        open_set, (f_score, tentative_g_score, neighbor)
+                    )
                     came_from[neighbor] = current
     if goal not in came_from:
         return (0, 0)

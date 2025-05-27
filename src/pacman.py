@@ -4,8 +4,11 @@ from algorithms import a_star_direction, bfs_direction
 
 TILE_SIZE = 20
 
+
 class Pacman:
-    def __init__(self, x, y, sprite_folder="../assets/sprites/pacman", algorithm="a_star"):
+    def __init__(
+        self, x, y, sprite_folder="../assets/sprites/pacman", algorithm="a_star"
+    ):
         self.start_x = x
         self.start_y = y
         self.grid_pos = pygame.Vector2(x, y)
@@ -72,7 +75,13 @@ class Pacman:
             for x in range(width):
                 if map_data[y][x] != "#":
                     pos = (x, y)
-                    min_dist_to_ghost = min([abs(pos[0] - gp[0]) + abs(pos[1] - gp[1]) for gp in ghost_positions], default=float("inf"))
+                    min_dist_to_ghost = min(
+                        [
+                            abs(pos[0] - gp[0]) + abs(pos[1] - gp[1])
+                            for gp in ghost_positions
+                        ],
+                        default=float("inf"),
+                    )
                     if min_dist_to_ghost > max_dist:
                         max_dist = min_dist_to_ghost
                         safest_pos = pos
@@ -91,7 +100,11 @@ class Pacman:
                 self.respawn_time = now
             return
 
-        if self.invincible and self.respawn_time and now - self.respawn_time > 5000:
+        if (
+            self.invincible
+            and self.respawn_time
+            and now - self.respawn_time > 5000
+        ):
             self.invincible = False
 
         if now - self.last_update_time > self.frame_delay:
@@ -100,7 +113,11 @@ class Pacman:
 
         if self.alive:
             # Chỉ né các ghost không ở trạng thái frightened và còn sống
-            ghost_positions = [(int(ghost.grid_pos.x), int(ghost.grid_pos.y)) for ghost in ghosts if ghost.alive and ghost.frightened_timer <= 0]
+            ghost_positions = [
+                (int(ghost.grid_pos.x), int(ghost.grid_pos.y))
+                for ghost in ghosts
+                if ghost.alive and ghost.frightened_timer <= 0
+            ]
             pacman_pos = (int(self.grid_pos.x), int(self.grid_pos.y))
             ghost_near = any(
                 abs(pacman_pos[0] - gp[0]) + abs(pacman_pos[1] - gp[1]) <= 2
@@ -113,13 +130,25 @@ class Pacman:
                 target = self.find_nearest_item(map_data)
 
             if self.algorithm == "a_star":
-                move = a_star_direction(map_data, pacman_pos, target, ghost_positions=ghost_positions)
+                move = a_star_direction(
+                    map_data,
+                    pacman_pos,
+                    target,
+                    ghost_positions=ghost_positions,
+                )
                 self.set_direction(move[0], move[1])
             elif self.algorithm == "bfs":
-                move = bfs_direction(map_data, pacman_pos, target, ghost_positions=ghost_positions)
+                move = bfs_direction(
+                    map_data,
+                    pacman_pos,
+                    target,
+                    ghost_positions=ghost_positions,
+                )
                 self.set_direction(move[0], move[1])
 
-        if self.desired_direction != self.direction and self.can_move(self.desired_direction, map_data):
+        if self.desired_direction != self.direction and self.can_move(
+            self.desired_direction, map_data
+        ):
             self.direction = self.desired_direction
 
         if self.can_move(self.direction, map_data):
@@ -128,17 +157,17 @@ class Pacman:
                 int(self.pixel_pos.x // TILE_SIZE),
                 int(self.pixel_pos.y // TILE_SIZE),
             )
-        for ghost in ghosts:
-            if self.is_colliding_with(ghost):
-                if ghost.frightened_timer > 0 or self.invincible:
-                    ghost.set_alive(map_data, ghost.grid_pos, ghost.home_pos)
-                    if ghost.frightened_timer > 0:
-                        self.eatGhost += 1
-                else:
-                    self.set_dead()
+        # for ghost in ghosts:
+        #     if self.is_colliding_with(ghost):
+        #         if ghost.frightened_timer > 0 or self.invincible:
+        #             ghost.set_alive(map_data, ghost.grid_pos, ghost.home_pos)
+        #             if ghost.frightened_timer > 0:
+        #                 self.eatGhost += 1
+        #         else:
+        #             self.set_dead()
 
-    def is_colliding_with(self, ghost):
-        return int(self.grid_pos.x) == int(ghost.grid_pos.x) and int(self.grid_pos.y) == int(ghost.grid_pos.y)
+    # def is_colliding_with(self, ghost):
+    #     return int(self.grid_pos.x) == int(ghost.grid_pos.x) and int(self.grid_pos.y) == int(ghost.grid_pos.y)
 
     def can_move(self, direction, map_data):
         if direction.length_squared() == 0:
@@ -158,7 +187,13 @@ class Pacman:
         }
 
         for row, col in tiles:
-            if row < 0 or row >= len(map_data) or col < 0 or col >= len(map_data[0]) or map_data[row][col] == "#":
+            if (
+                row < 0
+                or row >= len(map_data)
+                or col < 0
+                or col >= len(map_data[0])
+                or map_data[row][col] == "#"
+            ):
                 return False
         return True
 
