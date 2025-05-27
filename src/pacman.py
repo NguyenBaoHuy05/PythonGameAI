@@ -1,10 +1,11 @@
 import pygame
 import os
+from algorithms import a_star_direction, bfs_direction
 
 TILE_SIZE = 20
 
 class Pacman:
-    def __init__(self, x, y, sprite_folder="../assets/sprites/pacman"):
+    def __init__(self, x, y, sprite_folder="../assets/sprites/pacman", algorithm="a_star"):
         self.start_x = x
         self.start_y = y
         self.grid_pos = pygame.Vector2(x, y)
@@ -21,8 +22,8 @@ class Pacman:
 
         self.death_time = None
         self.respawn_time = None
+        self.algorithm = algorithm
 
-        # Load animation frames
         self.frames = [
             pygame.transform.scale(
                 pygame.image.load(
@@ -33,7 +34,7 @@ class Pacman:
             for i in range(1, 5)
         ]
         self.current_frame = 0
-        self.frame_delay = 100  # ms
+        self.frame_delay = 100
         self.last_update_time = pygame.time.get_ticks()
 
     def reset_position(self):
@@ -48,6 +49,34 @@ class Pacman:
 
     def set_direction(self, dx, dy):
         self.desired_direction = pygame.Vector2(dx, dy)
+
+    def find_nearest_item(self, map_data):
+        min_dist = float("inf")
+        nearest = None
+        px, py = int(self.grid_pos.x), int(self.grid_pos.y)
+        for y, row in enumerate(map_data):
+            for x, tile in enumerate(row):
+                if tile == "." or tile == "o":
+                    dist = abs(px - x) + abs(py - y)
+                    if dist < min_dist:
+                        min_dist = dist
+                        nearest = (x, y)
+        return nearest if nearest else (px, py)
+
+    def find_safest_position(self, map_data, ghost_positions):
+        max_dist = -float("inf")
+        safest_pos = (int(self.grid_pos.x), int(self.grid_pos.y))
+        height, width = len(map_data), len(map_data[0])
+
+        for y in range(height):
+            for x in range(width):
+                if map_data[y][x] != "#":
+                    pos = (x, y)
+                    min_dist_to_ghost = min([abs(pos[0] - gp[0]) + abs(pos[1] - gp[1]) for gp in ghost_positions], default=float("inf"))
+                    if min_dist_to_ghost > max_dist:
+                        max_dist = min_dist_to_ghost
+                        safest_pos = pos
+        return safest_pos
 
     def update(self, map_data, ghosts):
         now = pygame.time.get_ticks()
@@ -64,20 +93,33 @@ class Pacman:
                 self.respawn_time = now
             return
 
-        # Hết trạng thái bất tử sau 5s
         if self.invincible and self.respawn_time and now - self.respawn_time > 5000:
             self.invincible = False
 
-        # Cập nhật animation Pacman
         if now - self.last_update_time > self.frame_delay:
             self.current_frame = (self.current_frame + 1) % len(self.frames)
             self.last_update_time = now
 
-        # Đổi hướng nếu có thể
+        if self.alive:
+            ghost_positions = [(int(ghost.grid_pos.x), int(ghost.grid_pos.y)) for ghost in ghosts if ghost.alive]
+            pacman_pos = (int(self.grid_pos.x), int(self.grid_pos.y))
+            ghost_near = any(abs(pacman_pos[0] - gp[0]) + abs(pacman_pos[1] - gp[1]) <= 2 for gp in ghost_positions)
+
+            if ghost_near and not self.invincible:
+                target = self.find_safest_position(map_data, ghost_positions)
+            else:
+                target = self.find_nearest_item(map_data)
+
+            if self.algorithm == "a_star":
+                move = a_star_direction(map_data, pacman_pos, target, ghost_positions=ghost_positions)
+                self.set_direction(move[0], move[1])
+            elif self.algorithm == "bfs":
+                move = bfs_direction(map_data, pacman_pos, target)
+                self.set_direction(move[0], move[1])
+
         if self.desired_direction != self.direction and self.can_move(self.desired_direction, map_data):
             self.direction = self.desired_direction
 
-        # Di chuyển Pacman nếu có thể
         if self.can_move(self.direction, map_data):
             self.pixel_pos += self.direction * self.speed
             self.grid_pos = pygame.Vector2(
@@ -86,10 +128,10 @@ class Pacman:
             )
         for ghost in ghosts:
             if self.is_colliding_with(ghost):
-                if ghost.frightened_timer > 0 or self.invincible:  # Nếu ma đang yếu
-                    ghost.set_alive(map_data, ghost.grid_pos, ghost.home_pos) # Đưa ma về nhà
-                    if ghost.frightened_timer > 0:  
-                        self.eatGhost += 1  # Tăng số lượng ma đã ăn
+                if ghost.frightened_timer > 0 or self.invincible:
+                    ghost.set_alive(map_data, ghost.grid_pos, ghost.home_pos)
+                    if ghost.frightened_timer > 0:
+                        self.eatGhost += 1
                 else:
                     self.set_dead()
 

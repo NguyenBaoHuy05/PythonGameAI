@@ -17,7 +17,6 @@ from menu import (
     victory_menu,
     show_controls,
 )
-from algorithms import a_star_direction, bfs_direction, heuristic
 
 # ==== CẤU HÌNH ====
 TILE_SIZE = 20
@@ -51,22 +50,9 @@ def draw_ui(screen, font, score, lives):
 def check_win(map_data):
     return not any("." in row or "o" in row for row in map_data)
 
-def find_nearest_item(map_data, pacman):
-    min_dist = float("inf")
-    nearest = None
-    px, py = int(pacman.grid_pos.x), int(pacman.grid_pos.y)
-    for y, row in enumerate(map_data):
-        for x, tile in enumerate(row):
-            if tile == "." or tile == "o":
-                dist = abs(px - x) + abs(py - y)
-                if dist < min_dist:
-                    min_dist = dist
-                    nearest = (x, y)
-    return nearest if nearest else (px, py)
-
 def reset_game(mode):
     new_map_data = load_map(MAP_FILE)
-    pacman = Pacman(*find_pacman_start(new_map_data))
+    pacman = Pacman(*find_pacman_start(new_map_data), algorithm=mode)
     ghosts = [
         Ghost(
             *find_ghost_start(new_map_data, "B"),
@@ -116,13 +102,11 @@ def main():
     )
     pygame.display.set_caption("Pacman")
 
-    # Hiển thị menu chính
     mode = main_menu(screen)
     if mode not in ["a_star", "bfs"]:
         pygame.quit()
         sys.exit()
 
-    # Khởi tạo game
     map_data, pacman, ghosts, score, won, all_dot_pos, all_Power_pos = reset_game(mode)
 
     last_time = pygame.time.get_ticks()
@@ -138,17 +122,6 @@ def main():
         dt = clock.tick(FPS)
         screen.fill((0, 0, 0))
 
-        # === Gen hướng di chuyển cho Pacman
-        if pacman.alive:
-            target = find_nearest_item(map_data, pacman)
-            if mode == "a_star":
-                move = a_star_direction(map_data, (int(pacman.grid_pos.x), int(pacman.grid_pos.y)), target)
-                pacman.set_direction(move[0], move[1])
-            elif mode == "bfs":
-                move = bfs_direction(map_data, (int(pacman.grid_pos.x), int(pacman.grid_pos.y)), target)
-                pacman.set_direction(move[0], move[1])
-
-        # === XỬ LÝ SỰ KIỆN ===
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
