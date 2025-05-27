@@ -172,4 +172,4 @@ def a_star_direction(map_data, start, goal):
         node = came_from[node]
     dx = node[0] - start[0]
     dy = node[1] - start[1]
-    return (dx, dy) if (dx, dy) != (0, 0) else (0, 0), tentative_g_score
+    return (dx, dy) if (dx, dy) != (0, 0) else (0, 0)

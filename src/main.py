@@ -1,3 +1,4 @@
+from statistics import mode
 import pygame
 import sys
 from ghost import Ghost
@@ -16,6 +17,7 @@ from menu import (
     victory_menu,
     show_controls,
 )
+from algorithms import a_star_direction, bfs_direction, heuristic
 
 # ==== CẤU HÌNH ====
 TILE_SIZE = 20
@@ -25,7 +27,6 @@ WHITE = (255, 255, 255)
 BLUE = (0, 0, 255)
 YELLOW = (255, 255, 0)
 ORANGE = (255, 150, 0)
-
 
 # ==== HÀM TIỆN ÍCH ====
 def draw_map(screen, map_data):
@@ -41,58 +42,29 @@ def draw_map(screen, map_data):
             elif tile == "o":
                 pygame.draw.circle(screen, ORANGE, rect.center, 6)
 
-
 def draw_ui(screen, font, score, lives):
     score_text = font.render(f"Score: {score}", True, WHITE)
     lives_text = font.render(f"Lives: {lives}", True, WHITE)
     screen.blit(score_text, (10, 10))
     screen.blit(lives_text, (10, 40))
 
-
 def check_win(map_data):
     return not any("." in row or "o" in row for row in map_data)
 
+def find_nearest_item(map_data, pacman):
+    min_dist = float("inf")
+    nearest = None
+    px, py = int(pacman.grid_pos.x), int(pacman.grid_pos.y)
+    for y, row in enumerate(map_data):
+        for x, tile in enumerate(row):
+            if tile == "." or tile == "o":
+                dist = abs(px - x) + abs(py - y)
+                if dist < min_dist:
+                    min_dist = dist
+                    nearest = (x, y)
+    return nearest if nearest else (px, py)
 
-def game_over_menu(screen, font):
-    # Hiển thị menu khi hết mạng
-    screen.fill((0, 0, 0))
-    game_over_text = font.render("Game Over!", True, (255, 0, 0))
-    retry_text = font.render(
-        "Chose R to play again or Q to quit", True, (255, 255, 255)
-    )
-
-    screen.blit(
-        game_over_text,
-        game_over_text.get_rect(
-            center=(screen.get_width() // 2, screen.get_height() // 3)
-        ),
-    )
-    screen.blit(
-        retry_text,
-        retry_text.get_rect(
-            center=(screen.get_width() // 2, screen.get_height() // 2)
-        ),
-    )
-
-    pygame.display.flip()
-
-    waiting = True
-    while waiting:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-            elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_r:
-                    waiting = False
-                    return "retry"
-                elif event.key == pygame.K_q:
-                    pygame.quit()
-                    sys.exit()
-
-
-def reset_game():
-    # Load lại map, tạo lại pacman, ghosts, reset điểm, trạng thái
+def reset_game(mode):
     new_map_data = load_map(MAP_FILE)
     pacman = Pacman(*find_pacman_start(new_map_data))
     ghosts = [
@@ -131,7 +103,6 @@ def reset_game():
         all_Power_position,
     )
 
-
 def main():
     pygame.init()
     font = pygame.font.SysFont("arial", 24)
@@ -146,26 +117,19 @@ def main():
     pygame.display.set_caption("Pacman")
 
     # Hiển thị menu chính
-    menu_result = main_menu(screen)
-    if menu_result != "play":
+    mode = main_menu(screen)
+    if mode not in ["a_star", "bfs"]:
         pygame.quit()
         sys.exit()
 
-    # Hiển thị menu chính trước khi vào game
-    menu_result = main_menu(screen)
-    if menu_result == "quit":
-        pygame.quit()
-        sys.exit()
+    # Khởi tạo game
+    map_data, pacman, ghosts, score, won, all_dot_pos, all_Power_pos = reset_game(mode)
 
-    # Gọi reset_game() lần đầu sau khi tạo màn hình
-    map_data, pacman, ghosts, score, won, all_dot_pos, all_Power_pos = (
-        reset_game()
-    )
     last_time = pygame.time.get_ticks()
     chase_time = 15000
     scatter_time = 5000
     chase_mode = False
-    clock = pygame.time.Clock()  # Sửa typo từ pygame.clock
+    clock = pygame.time.Clock()
     running = True
     paused = False
 
@@ -173,6 +137,16 @@ def main():
         now = pygame.time.get_ticks()
         dt = clock.tick(FPS)
         screen.fill((0, 0, 0))
+
+        # === Gen hướng di chuyển cho Pacman
+        if pacman.alive:
+            target = find_nearest_item(map_data, pacman)
+            if mode == "a_star":
+                move = a_star_direction(map_data, (int(pacman.grid_pos.x), int(pacman.grid_pos.y)), target)
+                pacman.set_direction(move[0], move[1])
+            elif mode == "bfs":
+                move = bfs_direction(map_data, (int(pacman.grid_pos.x), int(pacman.grid_pos.y)), target)
+                pacman.set_direction(move[0], move[1])
 
         # === XỬ LÝ SỰ KIỆN ===
         for event in pygame.event.get():
@@ -184,35 +158,28 @@ def main():
                     if paused:
                         result = pause_menu(screen, font)
                         if result == "menu":
-                            menu_result = main_menu(screen)
-                            if menu_result != "play":
+                            mode = main_menu(screen)
+                            if mode in ["a_star", "bfs"]:
+                                map_data, pacman, ghosts, score, won, all_dot_pos, all_Power_pos = reset_game(mode)
+                            else:
                                 running = False
                             paused = False
-                elif event.key == pygame.K_c:  # Mở controls
+                elif event.key == pygame.K_c:
                     show_controls(screen)
-                    # Vẽ lại game sau khi đóng controls
                     screen.fill((0, 0, 0))
                     draw_map(screen, map_data)
                     pacman.draw(screen)
                     for ghost in ghosts:
                         ghost.draw(screen)
-                    draw_ui(screen, font, score, pacman.lives)
+                    draw_ui(screen, font, score + pacman.eatGhost * 30, pacman.lives)
                     pygame.display.flip()
-                elif not paused:
-                    if event.key == pygame.K_LEFT:
-                        pacman.set_direction(-1, 0)
-                    elif event.key == pygame.K_RIGHT:
-                        pacman.set_direction(1, 0)
-                    elif event.key == pygame.K_UP:
-                        pacman.set_direction(0, -1)
-                    elif event.key == pygame.K_DOWN:
-                        pacman.set_direction(0, 1)
 
         if paused:
             pygame.display.flip()
             continue
 
         if pacman.lives > 0:
+            pacman.update(map_data, ghosts)
 
             if pacman.alive:
                 x, y = int(pacman.grid_pos.x), int(pacman.grid_pos.y)
@@ -221,14 +188,12 @@ def main():
                     score += 10
                     if (y, x) in all_dot_pos:
                         all_dot_pos.remove((y, x))
-                        print("Có")
                     if check_win(map_data):
                         won = True
                 elif map_data[y][x] == "o":
                     map_data[y][x] = " "
                     if (y, x) in all_Power_pos:
                         all_Power_pos.remove((y, x))
-                        print("Có")
                     score += 50
                     for ghost in ghosts:
                         ghost.set_frightened()
@@ -243,7 +208,6 @@ def main():
                     if now - last_time > scatter_time:
                         chase_mode = True
                         last_time = now
-            pacman.update(map_data)
 
             draw_map(screen, map_data)
             pacman.draw(screen)
@@ -252,51 +216,30 @@ def main():
             draw_ui(screen, font, score + pacman.eatGhost * 30, pacman.lives)
 
             if won:
-                result = victory_menu(screen, font, score)
+                result = victory_menu(screen, font, score + pacman.eatGhost * 30)
                 if result == "next":
-                    (
-                        map_data,
-                        pacman,
-                        ghosts,
-                        score,
-                        won,
-                        all_dot_pos,
-                        all_Power_pos,
-                    ) = reset_game()
+                    map_data, pacman, ghosts, score, won, all_dot_pos, all_Power_pos = reset_game(mode)
                 elif result == "menu":
-                    menu_result = main_menu(screen)
-                    if menu_result == "play":
-                        (
-                            map_data,
-                            pacman,
-                            ghosts,
-                            score,
-                            won,
-                            all_dot_pos,
-                            all_Power_pos,
-                        ) = reset_game()
+                    mode = main_menu(screen)
+                    if mode in ["a_star", "bfs"]:
+                        map_data, pacman, ghosts, score, won, all_dot_pos, all_Power_pos = reset_game(mode)
                     else:
                         running = False
         else:
-            # Hết mạng
-            action = game_over_menu(screen, font)
+            action = game_over_menu(screen, font, score + pacman.eatGhost * 30)
             if action == "retry":
-                # Reset game khi chơi lại
-                (
-                    map_data,
-                    pacman,
-                    ghosts,
-                    score,
-                    won,
-                    all_dot_pos,
-                    all_Power_pos,
-                ) = reset_game()
+                map_data, pacman, ghosts, score, won, all_dot_pos, all_Power_pos = reset_game(mode)
+            elif action == "menu":
+                mode = main_menu(screen)
+                if mode in ["a_star", "bfs"]:
+                    map_data, pacman, ghosts, score, won, all_dot_pos, all_Power_pos = reset_game(mode)
+                else:
+                    running = False
 
         pygame.display.flip()
 
     pygame.quit()
     sys.exit()
-
 
 if __name__ == "__main__":
     main()

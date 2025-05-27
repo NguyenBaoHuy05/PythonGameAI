@@ -3,7 +3,6 @@ import os
 
 TILE_SIZE = 20
 
-
 class Pacman:
     def __init__(self, x, y, sprite_folder="../assets/sprites/pacman"):
         self.start_x = x
@@ -50,7 +49,7 @@ class Pacman:
     def set_direction(self, dx, dy):
         self.desired_direction = pygame.Vector2(dx, dy)
 
-    def update(self, map_data):
+    def update(self, map_data, ghosts):
         now = pygame.time.get_ticks()
         if not self.alive:
             elapsed = now - self.death_time
@@ -58,7 +57,6 @@ class Pacman:
                 self.fade_alpha = max(255 - int((elapsed / 2000) * 255), 0)
                 print(elapsed)
             else:
-                # Sau 2s hiệu ứng mờ dần thì giảm mạng, reset vị trí và kích hoạt bất tử
                 print("Pacman died")
                 self.lives -= 1
                 self.reset_position()
@@ -67,11 +65,7 @@ class Pacman:
             return
 
         # Hết trạng thái bất tử sau 5s
-        if (
-            self.invincible
-            and self.respawn_time
-            and now - self.respawn_time > 5000
-        ):
+        if self.invincible and self.respawn_time and now - self.respawn_time > 5000:
             self.invincible = False
 
         # Cập nhật animation Pacman
@@ -80,26 +74,27 @@ class Pacman:
             self.last_update_time = now
 
         # Đổi hướng nếu có thể
-        if self.desired_direction != self.direction and self.can_move(
-            self.desired_direction, map_data
-        ):
+        if self.desired_direction != self.direction and self.can_move(self.desired_direction, map_data):
             self.direction = self.desired_direction
 
         # Di chuyển Pacman nếu có thể
         if self.can_move(self.direction, map_data):
             self.pixel_pos += self.direction * self.speed
-            if self.pixel_pos.x < 0:
-                self.pixel_pos.x = 27 * TILE_SIZE
-            elif self.pixel_pos.x >= 27 * TILE_SIZE:
-                self.pixel_pos.x = 0
-            if self.pixel_pos.y < 0:
-                self.pixel_pos.y = 30 * TILE_SIZE
-            elif self.pixel_pos.y >= 30 * TILE_SIZE:
-                self.pixel_pos.y = 0
             self.grid_pos = pygame.Vector2(
                 int(self.pixel_pos.x // TILE_SIZE),
                 int(self.pixel_pos.y // TILE_SIZE),
             )
+        for ghost in ghosts:
+            if self.is_colliding_with(ghost):
+                if ghost.frightened_timer > 0 or self.invincible:  # Nếu ma đang yếu
+                    ghost.set_alive(map_data, ghost.grid_pos, ghost.home_pos) # Đưa ma về nhà
+                    if ghost.frightened_timer > 0:  
+                        self.eatGhost += 1  # Tăng số lượng ma đã ăn
+                else:
+                    self.set_dead()
+
+    def is_colliding_with(self, ghost):
+        return int(self.grid_pos.x) == int(ghost.grid_pos.x) and int(self.grid_pos.y) == int(ghost.grid_pos.y)
 
     def can_move(self, direction, map_data):
         if direction.length_squared() == 0:
@@ -119,7 +114,7 @@ class Pacman:
         }
 
         for row, col in tiles:
-            if map_data[row][col] == "#":
+            if row < 0 or row >= len(map_data) or col < 0 or col >= len(map_data[0]) or map_data[row][col] == "#":
                 return False
         return True
 
@@ -139,13 +134,11 @@ class Pacman:
             faded.set_alpha(self.fade_alpha)
             screen.blit(faded, (int(self.pixel_pos.x), int(self.pixel_pos.y)))
         elif self.invincible:
-            # Hiệu ứng nhấp nháy khi bất tử: alpha thay đổi 128 và 255 mỗi 300ms
             alpha = 128 if (pygame.time.get_ticks() // 300) % 2 == 0 else 255
             faded = rotated.copy()
             faded.set_alpha(alpha)
             screen.blit(faded, (int(self.pixel_pos.x), int(self.pixel_pos.y)))
         else:
-            # Vẽ bình thường
             screen.blit(rotated, (int(self.pixel_pos.x), int(self.pixel_pos.y)))
 
     def _get_angle(self):
