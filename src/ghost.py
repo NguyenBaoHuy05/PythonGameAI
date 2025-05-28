@@ -151,20 +151,38 @@ class Ghost:
             return
         self.check_collision(map_data, pacman)
         if self.frightened_timer > 0:
-            if now - self.last_update_time > self.frame_delay + 100:
+            if now - self.last_update_time > 300 or self.frightened_timer > 418:
                 near_direction = self.direction
-                if self.frightened_timer > 60:
-                    target_dir = alg.near_pacman(
-                        map_data,
-                        (int(self.grid_pos.x), int(self.grid_pos.y)),
-                        (int(pacman.grid_pos.x), int(pacman.grid_pos.y)),
-                    )
-                    near_direction = pygame.Vector2(target_dir)
-
-                self.direction = near_direction
+                target_dir = alg.near_pacman(
+                    map_data,
+                    (int(self.grid_pos.x), int(self.grid_pos.y)),
+                    (int(pacman.grid_pos.x), int(pacman.grid_pos.y)),
+                )
+                near_direction = pygame.Vector2(target_dir)
+                self.direction = -near_direction
                 self.last_update_time = now
+            if self.can_move(self.direction, map_data, self.speed):
+                self.next_pos = (
+                    pygame.Vector2(
+                        int(self.pixel_pos.x // TILE_SIZE),
+                        int(self.pixel_pos.y // TILE_SIZE),
+                    )
+                    + self.direction
+                ) * TILE_SIZE
+                self.pixel_pos += self.direction * self.speed
+                if (self.next_pos - self.pixel_pos).length() < self.speed:
+                    self.pixel_pos = self.next_pos
+                self.grid_pos = pygame.Vector2(
+                    int(self.pixel_pos.x // TILE_SIZE),
+                    int(self.pixel_pos.y // TILE_SIZE),
+                )
+            else:
+                self.change_direction(map_data)
+            return
 
-        if chase_mode and random.random() > 0.4:  # Giảm tần suất gọi bfs_direction
+        if (
+            chase_mode and random.random() > 0.4
+        ):  # Giảm tần suất gọi bfs_direction
             move = alg.bfs_direction(
                 map_data,
                 (int(self.grid_pos.x), int(self.grid_pos.y)),
@@ -172,12 +190,23 @@ class Ghost:
             )
             self.chase_path = pygame.Vector2(move[0], move[1])
             if self.chase_path == pygame.Vector2(0, 0):
-                directions = [pygame.Vector2(1, 0), pygame.Vector2(-1, 0), pygame.Vector2(0, 1), pygame.Vector2(0, -1)]
-                valid_directions = [d for d in directions if self.can_move(d, map_data, self.speed)]
+                directions = [
+                    pygame.Vector2(1, 0),
+                    pygame.Vector2(-1, 0),
+                    pygame.Vector2(0, 1),
+                    pygame.Vector2(0, -1),
+                ]
+                valid_directions = [
+                    d
+                    for d in directions
+                    if self.can_move(d, map_data, self.speed)
+                ]
                 if valid_directions:
                     self.chase_path = random.choice(valid_directions)
                 else:
-                    print(f"Ghost {self.name} stuck at {self.grid_pos}, no valid directions")  # Debug log
+                    print(
+                        f"Ghost {self.name} stuck at {self.grid_pos}, no valid directions"
+                    )  # Debug log
             move_direction = (
                 self.chase_path
                 if self.can_move(self.chase_path, map_data, self.speed)
@@ -202,11 +231,18 @@ class Ghost:
             else:
                 self.change_direction(map_data, self.direction)
                 if not self.can_move(self.direction, map_data, self.speed):
-                    print(f"Ghost {self.name} cannot move in direction {self.direction} at {self.grid_pos}")  # Debug log
+                    print(
+                        f"Ghost {self.name} cannot move in direction {self.direction} at {self.grid_pos}"
+                    )  # Debug log
 
     def check_collision(self, map_data, pacman):
         if self.is_colliding_with(pacman):
-            if self.alive and pacman.alive and not self.frightened_timer > 0 and not pacman.invincible:
+            if (
+                self.alive
+                and pacman.alive
+                and not self.frightened_timer > 0
+                and not pacman.invincible
+            ):
                 pacman.set_dead()
 
     def is_colliding_with(self, pacman):
@@ -252,7 +288,11 @@ class Ghost:
         do_directions = other_direction if other_direction else self.direction
         random.shuffle(directions)
         for d in directions:
-            if d != -do_directions and self.can_move(d, map_data):
+            if (
+                d != -do_directions
+                and d != -self.direction
+                and self.can_move(d, map_data)
+            ):
                 self.direction = d
                 break
 

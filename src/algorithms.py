@@ -45,14 +45,14 @@ def bfs_len(map_data, start, goal):
 
 def near_pacman(map_data, start, pacman_pos):
     best_dir = (1, 0)
-    max_dist = -float("inf")
+    max_dist = float("inf")
 
     for dx, dy in directions:
         nx, ny = start[0] + dx, start[1] + dy
         if 0 <= ny < len(map_data) and 0 <= nx < len(map_data[0]):
             if map_data[ny][nx] != "#":
                 dist = bfs_len(map_data, (nx, ny), pacman_pos)
-                if dist > max_dist:
+                if dist < max_dist:
                     max_dist = dist
                     best_dir = (dx, dy)
 
@@ -142,7 +142,11 @@ def bfs_direction(map_data, start, goal, ghost_positions=None):
                     elif dist_to_ghost <= 5:
                         ghost_cost += 20
                 open_neighbors = count_open_neighbors(map_data, nx, ny)
-                dead_end_cost = 50 if open_neighbors <= 1 else 10 if open_neighbors == 2 else 0  # Giảm chi phí
+                dead_end_cost = (
+                    50
+                    if open_neighbors <= 1
+                    else 10 if open_neighbors == 2 else 0
+                )  # Giảm chi phí
                 new_cost = costs[current] + 1 + ghost_cost + dead_end_cost
                 if neighbor not in costs or new_cost < costs[neighbor]:
                     costs[neighbor] = new_cost
@@ -150,19 +154,29 @@ def bfs_direction(map_data, start, goal, ghost_positions=None):
                     heapq.heappush(queue, (new_cost, neighbor))
 
     if goal not in visited:
-        valid_directions = [(dx, dy) for dx, dy in directions 
-                           if 0 <= start[1] + dy < rows and 0 <= start[0] + dx < cols 
-                           and map_data[start[1] + dy][start[0] + dx] != "#"]
+        valid_directions = [
+            (dx, dy)
+            for dx, dy in directions
+            if 0 <= start[1] + dy < rows
+            and 0 <= start[0] + dx < cols
+            and map_data[start[1] + dy][start[0] + dx] != "#"
+        ]
         return random.choice(valid_directions) if valid_directions else (0, 0)
 
     node = goal
     while visited[node] != start:
         node = visited[node]
         if node is None:
-            valid_directions = [(dx, dy) for dx, dy in directions 
-                               if 0 <= start[1] + dy < rows and 0 <= start[0] + dx < cols 
-                               and map_data[start[1] + dy][start[0] + dx] != "#"]
-            return random.choice(valid_directions) if valid_directions else (0, 0)
+            valid_directions = [
+                (dx, dy)
+                for dx, dy in directions
+                if 0 <= start[1] + dy < rows
+                and 0 <= start[0] + dx < cols
+                and map_data[start[1] + dy][start[0] + dx] != "#"
+            ]
+            return (
+                random.choice(valid_directions) if valid_directions else (0, 0)
+            )
     dx = node[0] - start[0]
     dy = node[1] - start[1]
     return (dx, dy)
@@ -199,26 +213,45 @@ def a_star_direction(map_data, start, goal, ghost_positions=None):
                     elif dist_to_ghost <= 5:
                         ghost_cost += 20
                 open_neighbors = count_open_neighbors(map_data, nx, ny)
-                dead_end_cost = 50 if open_neighbors <= 1 else 10 if open_neighbors == 2 else 0  # Giảm chi phí
+                dead_end_cost = (
+                    50
+                    if open_neighbors <= 1
+                    else 10 if open_neighbors == 2 else 0
+                )  # Giảm chi phí
                 tentative_g_score = current_g + 1 + ghost_cost + dead_end_cost
-                if neighbor not in g_score or tentative_g_score < g_score[neighbor]:
+                if (
+                    neighbor not in g_score
+                    or tentative_g_score < g_score[neighbor]
+                ):
                     g_score[neighbor] = tentative_g_score
                     f_score = tentative_g_score + heuristic(neighbor, goal)
-                    heapq.heappush(open_set, (f_score, tentative_g_score, neighbor))
+                    heapq.heappush(
+                        open_set, (f_score, tentative_g_score, neighbor)
+                    )
                     came_from[neighbor] = current
     if goal not in came_from:
-        valid_directions = [(dx, dy) for dx, dy in directions 
-                           if 0 <= start[1] + dy < rows and 0 <= start[0] + dx < cols 
-                           and map_data[start[1] + dy][start[0] + dx] != "#"]
+        valid_directions = [
+            (dx, dy)
+            for dx, dy in directions
+            if 0 <= start[1] + dy < rows
+            and 0 <= start[0] + dx < cols
+            and map_data[start[1] + dy][start[0] + dx] != "#"
+        ]
         return random.choice(valid_directions) if valid_directions else (0, 0)
     node = goal
     while came_from[node] != start:
         node = came_from[node]
         if node is None:
-            valid_directions = [(dx, dy) for dx, dy in directions 
-                               if 0 <= start[1] + dy < rows and 0 <= start[0] + dx < cols 
-                               and map_data[start[1] + dy][start[0] + dx] != "#"]
-            return random.choice(valid_directions) if valid_directions else (0, 0)
+            valid_directions = [
+                (dx, dy)
+                for dx, dy in directions
+                if 0 <= start[1] + dy < rows
+                and 0 <= start[0] + dx < cols
+                and map_data[start[1] + dy][start[0] + dx] != "#"
+            ]
+            return (
+                random.choice(valid_directions) if valid_directions else (0, 0)
+            )
     dx = node[0] - start[0]
     dy = node[1] - start[1]
     return (dx, dy)
