@@ -206,10 +206,10 @@ def show_controls(screen, from_main_menu=False):
 
     # Hiển thị từng dòng điều khiển
     #for i, control in enumerate(controls):
-       # text = font.render(control, True, (255, 255, 255))
-        #screen.blit(
-           # text, text.get_rect(center=(screen.get_width() // 2, 180 + i * 40))
-       # )
+    #    text = font.render(control, True, (255, 255, 255))
+    #    screen.blit(
+    #        text, text.get_rect(center=(screen.get_width() // 2, 180 + i * 40))
+    #    )
 
     # Nút Back
     back_button = Button(
@@ -250,18 +250,62 @@ def show_controls(screen, from_main_menu=False):
     if not from_main_menu:
         screen.blit(temp_surface, (0, 0))
 
+
+def map_selection_menu(screen):
+    screen.fill((0, 0, 0))
+    font = get_font(30)
+    title = font.render("SELECT MAP", True, (255, 255, 0))
+    screen.blit(title, title.get_rect(center=(screen.get_width() // 2, 100)))
+    
+    buttons = []
+    map_names = [f"Level {i}" for i in range(1, 7)] + ["Random"]
+    for i, name in enumerate(map_names):
+        button = Button(
+            image=None,
+            pos=(screen.get_width() // 2, 180 + i * 60),
+            text_input=name,
+            font=get_font(35),
+            base_color="White",
+            hovering_color="Red",
+        )
+        buttons.append(button)
+    
+    while True:
+        mouse_pos = pygame.mouse.get_pos()
+        for button in buttons:
+            button.changeColor(mouse_pos)
+            button.update(screen)
+        
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                for i, button in enumerate(buttons):
+                    if button.checkForInput(mouse_pos):
+                        if i < 6:
+                            return f"level{i+1}.txt"
+                        else:
+                            return "random"
+        pygame.display.flip()
+
+
 def mode_selection_menu(screen):
     print("Entering mode selection menu")
-    # Tạo các nút cho chế độ di chuyển
+    screen.fill((0, 0, 0))
+    font = get_font(30)
+    title = font.render("SELECT MODE", True, (255, 255, 0))
+    screen.blit(title, title.get_rect(center=(screen.get_width() // 2, 100)))
+    
     a_star_button = Button(
         image=None,
         pos=(screen.get_width() // 2, 250),
         text_input="A* Mode",
         font=get_font(45),
         base_color="White",
-        hovering_color="Green",
+        hovering_color="Red",
     )
-
+    
     bfs_button = Button(
         image=None,
         pos=(screen.get_width() // 2, 350),
@@ -270,26 +314,27 @@ def mode_selection_menu(screen):
         base_color="White",
         hovering_color="Green",
     )
-
+    
     while True:
-        screen.fill((0, 0, 0))  # Đảm bảo làm mới màn hình
         mouse_pos = pygame.mouse.get_pos()
-
         for button in [a_star_button, bfs_button]:
             button.changeColor(mouse_pos)
             button.update(screen)
-
+        
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if a_star_button.checkForInput(mouse_pos):
-                    return "a_star"  # Trả về chế độ A*
+                    map_choice = map_selection_menu(screen)
+                    return map_choice, "a_star"  # Sửa thứ tự trả về
                 elif bfs_button.checkForInput(mouse_pos):
-                    return "bfs"  # Trả về chế độ BFS
+                    map_choice = map_selection_menu(screen)
+                    return map_choice, "bfs"  # Sửa thứ tự trả về
+        
+        pygame.display.flip()
 
-        pygame.display.flip()  # Cập nhật màn hình
 
 def main_menu(screen):
     try:
@@ -323,7 +368,6 @@ def main_menu(screen):
         hovering_color="Green",
     )
     
-
     quit_button = Button(
         image=None,
         pos=(screen.get_width() // 2, 450),
@@ -354,7 +398,8 @@ def main_menu(screen):
                 sys.exit()
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if play_button.checkForInput(mouse_pos):
-                    return mode_selection_menu(screen)  # Chuyển đến màn hình chọn chế độ
+                    map_choice, mode = mode_selection_menu(screen)  # Nhận map_choice, mode
+                    return map_choice, mode
                 elif controls_button.checkForInput(mouse_pos):
                     show_controls(screen, from_main_menu=True)
                     # Vẽ lại menu sau khi đóng controls
@@ -372,7 +417,7 @@ def main_menu(screen):
                         button.update(screen)
                     pygame.display.flip()
                 elif quit_button.checkForInput(mouse_pos):
-                    pygame.quit()   
+                    pygame.quit()
                     sys.exit()
 
         pygame.display.flip()
