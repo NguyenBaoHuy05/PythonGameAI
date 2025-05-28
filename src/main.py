@@ -118,7 +118,7 @@ def main():
                     pacman.draw(screen)
                     for ghost in ghosts:
                         ghost.draw(screen)
-                    draw_ui(screen, font, score, pacman.lives)
+                    draw_ui(screen, font, score + pacman.eatGhost * 100, pacman.lives)
                     pygame.display.flip()
 
         if paused:
@@ -138,6 +138,7 @@ def main():
                 elif map_data[y][x] == "o":
                     map_data[y][x] = " "
                     score += 50
+                    pacman.activate_chase_ghosts()
                     for ghost in ghosts:
                         ghost.set_frightened()
 
@@ -156,10 +157,10 @@ def main():
             pacman.draw(screen)
             for ghost in ghosts:
                 ghost.draw(screen)
-            draw_ui(screen, font, score, pacman.lives)
+            draw_ui(screen, font, score + pacman.eatGhost * 100, pacman.lives)
 
             if won:
-                result = victory_menu(screen, font, score)
+                result = victory_menu(screen, font, score + pacman.eatGhost * 100)
                 if result == "next":
                     next_level = map_choice
                     if map_choice != "random" and map_choice.startswith("level"):
@@ -183,7 +184,7 @@ def main():
                     else:
                         running = False
         else:
-            action = game_over_menu(screen, font, score)
+            action = game_over_menu(screen, font, score + pacman.eatGhost * 100)
             if action == "retry":
                 map_data, pacman, ghosts, score, won, map_choice = reset_game(map_choice, mode)
                 screen = pygame.display.set_mode((len(map_data[0]) * TILE_SIZE, len(map_data) * TILE_SIZE))

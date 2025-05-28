@@ -146,10 +146,13 @@ class Ghost:
             if now - self.last_update_time > self.frame_delay:
                 self.current_frame = (self.current_frame + 1) % len(self.frames)
                 self.last_update_time = now
+
         if not self.alive:
             self.revive_move()
             return
+
         self.check_collision(map_data, pacman)
+
         if self.frightened_timer > 0:
             if now - self.last_update_time > 300 or self.frightened_timer > 418:
                 near_direction = self.direction
@@ -173,16 +176,14 @@ class Ghost:
                 if (self.next_pos - self.pixel_pos).length() < self.speed:
                     self.pixel_pos = self.next_pos
                 self.grid_pos = pygame.Vector2(
-                    int(self.pixel_pos.x // TILE_SIZE),
-                    int(self.pixel_pos.y // TILE_SIZE),
+                    round(self.pixel_pos.x / TILE_SIZE),
+                    round(self.pixel_pos.y / TILE_SIZE),
                 )
             else:
                 self.change_direction(map_data)
             return
 
-        if (
-            chase_mode and random.random() > 0.4
-        ):  # Giảm tần suất gọi bfs_direction
+        if chase_mode and random.random() > 0.4:
             move = alg.bfs_direction(
                 map_data,
                 (int(self.grid_pos.x), int(self.grid_pos.y)),
@@ -206,7 +207,7 @@ class Ghost:
                 else:
                     print(
                         f"Ghost {self.name} stuck at {self.grid_pos}, no valid directions"
-                    )  # Debug log
+                    )
             move_direction = (
                 self.chase_path
                 if self.can_move(self.chase_path, map_data, self.speed)
@@ -216,8 +217,8 @@ class Ghost:
                 self.direction = move_direction
                 self.pixel_pos += self.direction * self.speed
                 self.grid_pos = pygame.Vector2(
-                    int(self.pixel_pos.x // TILE_SIZE),
-                    int(self.pixel_pos.y // TILE_SIZE),
+                    round(self.pixel_pos.x / TILE_SIZE),
+                    round(self.pixel_pos.y / TILE_SIZE),
                 )
             else:
                 self.change_direction(map_data)
@@ -225,25 +226,24 @@ class Ghost:
             if self.can_move(self.direction, map_data, self.speed):
                 self.pixel_pos += self.direction * self.speed
                 self.grid_pos = pygame.Vector2(
-                    int(self.pixel_pos.x // TILE_SIZE),
-                    int(self.pixel_pos.y // TILE_SIZE),
+                    round(self.pixel_pos.x / TILE_SIZE),
+                    round(self.pixel_pos.y / TILE_SIZE),
                 )
             else:
-                self.change_direction(map_data, self.direction)
+                self.change_direction(map_data)
                 if not self.can_move(self.direction, map_data, self.speed):
                     print(
                         f"Ghost {self.name} cannot move in direction {self.direction} at {self.grid_pos}"
-                    )  # Debug log
+                    )
 
     def check_collision(self, map_data, pacman):
         if self.is_colliding_with(pacman):
-            if (
-                self.alive
-                and pacman.alive
-                and not self.frightened_timer > 0
-                and not pacman.invincible
-            ):
-                pacman.set_dead()
+            if self.alive and pacman.alive:
+                if self.frightened_timer > 0:
+                    pacman.eatGhost += 1
+                    self.set_alive(map_data, self.grid_pos, self.home_pos)
+                elif not pacman.invincible:
+                    pacman.set_dead()
 
     def is_colliding_with(self, pacman):
         return int(self.grid_pos.x) == int(pacman.grid_pos.x) and int(
@@ -291,7 +291,7 @@ class Ghost:
             if (
                 d != -do_directions
                 and d != -self.direction
-                and self.can_move(d, map_data)
+                and self.can_move(d, map_data, self.speed)
             ):
                 self.direction = d
                 break
@@ -333,7 +333,6 @@ class Ghost:
             (int(goal_pos.x), int(goal_pos.y)),
         )
         self.bfs_index = 0
-
         self.frightened_timer = 0
         self.frightened_anim_frame = 0
         self.frightened_anim_counter = 0
@@ -346,7 +345,6 @@ class Ghost:
     def revive_move(self):
         if self.bfs_index < len(self.bfs_path):
             next_grid_cell = self.bfs_path[self.bfs_index]
-
             target_pixel_pos = pygame.Vector2(
                 next_grid_cell[0] * TILE_SIZE, next_grid_cell[1] * TILE_SIZE
             )
@@ -362,8 +360,8 @@ class Ghost:
                     self.speed + 2
                 )
                 self.grid_pos = pygame.Vector2(
-                    int(self.pixel_pos.x // TILE_SIZE),
-                    int(self.pixel_pos.y // TILE_SIZE),
+                    round(self.pixel_pos.x / TILE_SIZE),
+                    round(self.pixel_pos.y / TILE_SIZE),
                 )
             return
         else:
