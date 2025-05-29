@@ -200,7 +200,7 @@ def main():
             continue
 
         if pacman.lives > 0:
-            pacman.update(map_data, ghosts)
+            pacman.ReflexAgent(map_data, ghosts)
 
             if pacman.alive:
                 x, y = int(pacman.grid_pos.x), int(pacman.grid_pos.y)

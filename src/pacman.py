@@ -169,7 +169,7 @@ class Pacman:
                 predicted.append(next_pos)
         return predicted
 
-    def update(self, map_data, ghosts):
+    def ReflexAgent(self, map_data, ghosts):
         now = pygame.time.get_ticks()
         if not self.alive:
             elapsed = now - self.death_time

@@ -354,7 +354,7 @@ def mode_selection_menu(screen):
                     return map_choice, "dfs"
                 elif ucs_button.checkForInput(mouse_pos):
                     map_choice = map_selection_menu(screen)
-                    return map_choice, "heuristic"
+                    return map_choice, "ucs"
 
         pygame.display.flip()
 
