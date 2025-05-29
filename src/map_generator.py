@@ -71,7 +71,6 @@ def has_dead_end(grid):
 def create_map():
     grid = [["." for _ in range(COLS)] for _ in range(ROWS)]
 
-    # Viền tường ngoài
     for r in range(ROWS):
         grid[r][0] = "#"
         grid[r][COLS - 1] = "#"
@@ -127,6 +126,6 @@ def print_map(grid):
 
 
 if __name__ == "__main__":
-    random.seed()  # Có thể set seed cố định nếu cần kết quả ổn định
+    random.seed(42)
     game_map = create_map()
     print_map(game_map)

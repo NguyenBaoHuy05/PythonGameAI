@@ -112,7 +112,7 @@ def bfs_shortest_path(map_data, start, goal):
     return path
 
 
-def bfs_direction(map_data, start, goal, ghost_positions=None):
+def ucs_direction(map_data, start, goal, ghost_positions=None):
     if ghost_positions is None:
         ghost_positions = []
     if start == goal:
@@ -252,6 +252,112 @@ def a_star_direction(map_data, start, goal, ghost_positions=None):
             return (
                 random.choice(valid_directions) if valid_directions else (0, 0)
             )
+    dx = node[0] - start[0]
+    dy = node[1] - start[1]
+    return (dx, dy)
+
+
+def dfs_direction(map_data, start, goal, ghost_positions=None, danger_range=2):
+    if ghost_positions is None:
+        ghost_positions = []
+
+    def is_safe(pos):
+        return all(heuristic(pos, g) > danger_range for g in ghost_positions)
+
+    if start == goal:
+        return random.choice(directions)
+
+    rows, cols = len(map_data), len(map_data[0])
+    stack = [start]
+    visited = {start: None}
+
+    while stack:
+        current = stack.pop()
+        if current == goal:
+            break
+
+        for dx, dy in directions:
+            nx, ny = current[0] + dx, current[1] + dy
+            neighbor = (nx, ny)
+            if (
+                0 <= ny < rows
+                and 0 <= nx < cols
+                and map_data[ny][nx] != "#"
+                and neighbor not in visited
+                and is_safe(neighbor)
+            ):
+                visited[neighbor] = current
+                stack.append(neighbor)
+
+    # Không đến được goal
+    if goal not in visited:
+        valid_dirs = [
+            (dx, dy)
+            for dx, dy in directions
+            if 0 <= start[1] + dy < rows
+            and 0 <= start[0] + dx < cols
+            and map_data[start[1] + dy][start[0] + dx] != "#"
+            and is_safe((start[0] + dx, start[1] + dy))
+        ]
+        return random.choice(valid_dirs) if valid_dirs else (0, 0)
+
+    # Truy vết hướng
+    node = goal
+    while visited[node] != start:
+        node = visited[node]
+    dx = node[0] - start[0]
+    dy = node[1] - start[1]
+    return (dx, dy)
+
+
+def bfs_direction(map_data, start, goal, ghost_positions=None, danger_range=2):
+    if ghost_positions is None:
+        ghost_positions = []
+
+    def is_safe(pos):
+        return all(heuristic(pos, g) > danger_range for g in ghost_positions)
+
+    if start == goal:
+        return random.choice(directions)
+
+    rows, cols = len(map_data), len(map_data[0])
+    queue = deque([start])
+    visited = {start: None}
+
+    while queue:
+        current = queue.popleft()
+        if current == goal:
+            break
+
+        for dx, dy in directions:
+            nx, ny = current[0] + dx, current[1] + dy
+            neighbor = (nx, ny)
+            if (
+                0 <= ny < rows
+                and 0 <= nx < cols
+                and map_data[ny][nx] != "#"
+                and neighbor not in visited
+                and is_safe(neighbor)
+            ):
+                visited[neighbor] = current
+                queue.append(neighbor)
+
+    # Nếu không tới được goal
+    if goal not in visited:
+        valid_dirs = [
+            (dx, dy)
+            for dx, dy in directions
+            if 0 <= start[1] + dy < rows
+            and 0 <= start[0] + dx < cols
+            and map_data[start[1] + dy][start[0] + dx] != "#"
+            and is_safe((start[0] + dx, start[1] + dy))
+        ]
+        return random.choice(valid_dirs) if valid_dirs else (0, 0)
+
+    # Truy vết lại hướng đi
+    node = goal
+    while visited[node] != start:
+        node = visited[node]
     dx = node[0] - start[0]
     dy = node[1] - start[1]
     return (dx, dy)

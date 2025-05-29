@@ -251,16 +251,19 @@ def map_selection_menu(screen):
     screen.fill((0, 0, 0))
     font = get_font(30)
     title = font.render("SELECT MAP", True, (255, 255, 0))
-    screen.blit(title, title.get_rect(center=(screen.get_width() // 2, 100)))
+    screen.blit(title, title.get_rect(center=(screen.get_width() // 2, 50)))
 
     buttons = []
-    map_names = [f"Level {i}" for i in range(1, 7)] + ["Easy Random", "Random"]
+    map_names = [f"Level {i}" for i in range(1, 7)] + [
+        "Easy Random",
+        "Hard Random",
+    ]
     for i, name in enumerate(map_names):
         button = Button(
             image=None,
-            pos=(screen.get_width() // 2, 180 + i * 60),
+            pos=(screen.get_width() // 2, 100 + i * 60),
             text_input=name,
-            font=get_font(35),
+            font=get_font(30),
             base_color="White",
             hovering_color="Red",
         )
@@ -318,16 +321,16 @@ def mode_selection_menu(screen):
         base_color="White",
         hovering_color="Blue",
     )
-    heuristic_button = Button(
+    ucs_button = Button(
         image=None,
         pos=(screen.get_width() // 2, 400),
-        text_input="Heuristic Mode",
+        text_input="Uniform_Cost Mode",
         font=get_font(40),
         base_color="White",
         hovering_color="Yellow",
     )
 
-    buttons = [a_star_button, bfs_button, dfs_button, heuristic_button]
+    buttons = [a_star_button, bfs_button, dfs_button, ucs_button]
 
     while True:
         mouse_pos = pygame.mouse.get_pos()
@@ -349,7 +352,7 @@ def mode_selection_menu(screen):
                 elif dfs_button.checkForInput(mouse_pos):
                     map_choice = map_selection_menu(screen)
                     return map_choice, "dfs"
-                elif heuristic_button.checkForInput(mouse_pos):
+                elif ucs_button.checkForInput(mouse_pos):
                     map_choice = map_selection_menu(screen)
                     return map_choice, "heuristic"
 
